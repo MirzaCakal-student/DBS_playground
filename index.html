@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DB Query Playground — live engine</title>
+<link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+<header>
+  <div class="logo">DB</div>
+  <div>
+    <h1>Query Playground <span class="small">· live engine</span></h1>
+    <p>IT 2008 Database Systems — practise PostgreSQL · MongoDB · Redis with real execution</p>
+  </div>
+  <div class="status" id="status">
+    <span><span class="dot-s" id="st-pg"></span>PostgreSQL</span>
+    <span><span class="dot-s" id="st-mongo"></span>MongoDB</span>
+    <span><span class="dot-s" id="st-redis"></span>Redis</span>
+  </div>
+</header>
+<div class="tabs" id="phaseTabs">
+  <div class="tab active" data-p="1">1 · Beginner</div>
+  <div class="tab" data-p="2">2 · Intermediate</div>
+  <div class="tab" data-p="3">3 · Hard</div>
+</div>
+<div class="dbtabs" id="dbTabs">
+  <div class="dbtab active" data-db="pg">PostgreSQL</div>
+  <div class="dbtab" data-db="mongo">MongoDB</div>
+  <div class="dbtab" data-db="redis">Redis</div>
+</div>
+<div class="wrap">
+  <aside class="side">
+    <div class="diagram" id="diagram"></div>
+    <div id="schema"></div>
+    <div class="progress" id="progText"></div>
+    <div class="bar"><i id="progBar"></i></div>
+    <div class="pager" id="pager"></div>
+    <ul class="tasklist" id="taskList"></ul>
+  </aside>
+  <section class="main">
+    <div class="qbox">
+      <div class="qmeta" id="qmeta"></div>
+      <div class="qtitle" id="qtitle"></div>
+      <textarea id="editor" spellcheck="false" placeholder="Write your query here, then press Check (or Ctrl/Cmd+Enter)…"></textarea>
+      <div class="btns">
+        <button class="act primary" id="checkBtn">Check ✓</button>
+        <button class="act" id="runBtn">Run only</button>
+        <button class="act" id="ansBtn">Show answer</button>
+        <button class="act" id="hintBtn">Hint</button>
+        <button class="act" id="clearBtn">Clear</button>
+      </div>
+      <div class="answerbox" id="answerBox"></div>
+      <div class="hint" id="hint"></div>
+      <div class="verdict" id="verdict"></div>
+      <div class="resultwrap" id="resultwrap">
+        <h4 id="resTitle">Your result</h4>
+        <div id="resultArea"></div>
+        <div class="expected" id="expectedArea"></div>
+      </div>
+      <div class="nav">
+        <button class="act" id="prevBtn">← Prev</button>
+        <button class="act" id="nextBtn">Next →</button>
+      </div>
+    </div>
+    <p class="small" style="margin-top:14px">Your query is executed for real: <b>PostgreSQL</b> runs in PGlite (real Postgres in WebAssembly), <b>MongoDB</b> in mingo, and <b>Redis</b> in a built-in command emulator. Correctness is decided by comparing your result to the model answer's result on the same seed data.</p>
+  </section>
+</div>
+<script type="module" src="./app.js"></script>
+</body>
+</html>
