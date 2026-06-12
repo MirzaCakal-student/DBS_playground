@@ -65,11 +65,13 @@ db-playground/
 
 All tasks live in the `TASKS_RAW` array in `app.js` as `[phase, db, prompt, modelAnswer]`. **Adding tasks is easy** — append rows; pages (“See next …”) appear automatically once a phase has more than one page.
 
-## Seed data
+## Seed data (the real exam databases)
 
-- **PostgreSQL:** 14 `employees`, 4 `departments`, 6 `projects` (defined in `PG_SEED`).
-- **MongoDB:** 14 `books`, 10 `authors` (`MONGO_SEED`).
-- **Redis:** strings, a hash, a list, two sets, two sorted sets, a TTL key, a bitmap and a HyperLogLog (`redisSeed()`).
+- **PostgreSQL — `gamehub`:** `studios`, `games`, `players`, `purchases`, `reviews`, `sessions` and the `game_sales_report` view (defined in `PG_SEED`).
+- **MongoDB — `gamehub`:** `games`, `players`, `sessions` (sessions embed game + player details and a `tags[]` array) (`MONGO_SEED`).
+- **Redis — university:** student/course/department hashes, enrollment sets, an activity list, grade sorted sets and a TTL session key (`REDIS_SEED`).
+
+These are the same datasets used in the course Recap, and the playground includes the Recap exam tasks distributed across the difficulty levels.
 
 The seed is reset before every check, so tasks never interfere with each other.
 

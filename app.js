@@ -14,106 +14,166 @@ stEl.redis.classList.add('up'); // emulator always available
 
 /* ---------- SEED DATA ---------- */
 const PG_SEED = `
-DROP TABLE IF EXISTS order_items;
-DROP TABLE IF EXISTS orders;
-DROP TABLE IF EXISTS customers;
-DROP TABLE IF EXISTS products;
-DROP TABLE IF EXISTS projects;
-DROP TABLE IF EXISTS employees;
-DROP TABLE IF EXISTS departments;
-CREATE TABLE departments (dept_id int PRIMARY KEY, dept_name text, location text);
-INSERT INTO departments VALUES
- (1,'Engineering','New York'),(2,'Sales','Boston'),(3,'Marketing','Chicago'),(4,'HR','New York');
-CREATE TABLE employees (emp_id int PRIMARY KEY, first_name text, last_name text, email text,
-   salary int, dept_id int, hire_date date, manager_id int);
-INSERT INTO employees VALUES
- (1,'Alice','Smith','[email protected]',90000,1,'2019-03-01',NULL),
- (2,'Bob','Jones','[email protected]',60000,1,'2020-05-10',1),
- (3,'Carol','White','[email protected]',55000,1,'2021-07-15',1),
- (4,'Dave','Brown','[email protected]',48000,2,'2020-01-20',1),
- (5,'Eve','Davis','[email protected]',72000,2,'2021-02-11',4),
- (6,'Frank','Miller','[email protected]',35000,2,'2022-06-01',5),
- (7,'Grace','Lee','[email protected]',81000,3,'2019-09-09',1),
- (8,'Heidi','Moore','[email protected]',42000,3,'2021-11-30',7),
- (9,'Ivan','Clark','[email protected]',30000,3,'2022-03-03',7),
- (10,'Judy','Hall','[email protected]',65000,4,'2020-08-08',1),
- (11,'Mallory','King','[email protected]',47000,4,'2021-12-25',10),
- (12,'Niaj','Adams','[email protected]',51000,1,'2022-01-15',1),
- (13,'Oscar','Reed','[email protected]',38000,1,'2021-04-04',2),
- (14,'Peggy','Cole','[email protected]',73000,1,'2022-09-09',2);
-CREATE TABLE projects (proj_id int PRIMARY KEY, proj_name text, dept_id int, budget int);
-INSERT INTO projects VALUES
- (1,'Apollo',1,100000),(2,'Zephyr',1,50000),(3,'Orion',2,70000),
- (4,'Helix',3,30000),(5,'Nimbus',4,20000),(6,'Vega',2,90000);
-CREATE TABLE products (product_id int PRIMARY KEY, product_name text, category text, price numeric, stock int);
-INSERT INTO products VALUES
- (1,'Laptop','Electronics',1200,15),(2,'Phone','Electronics',800,30),(3,'Desk','Furniture',150,20),
- (4,'Chair','Furniture',85,40),(5,'Monitor','Electronics',300,25),(6,'Notebook','Stationery',5,200);
-CREATE TABLE customers (customer_id int PRIMARY KEY, name text, country text, city text, signup_date date);
-INSERT INTO customers VALUES
- (1,'Anna','USA','New York','2021-01-10'),(2,'Ben','UK','London','2020-06-05'),
- (3,'Cara','USA','Boston','2022-03-20'),(4,'Dino','Germany','Berlin','2021-11-15'),
- (5,'Ela','UK','Manchester','2022-07-01');
-CREATE TABLE orders (order_id int PRIMARY KEY, customer_id int, order_date date, status text, total numeric);
-INSERT INTO orders VALUES
- (1,1,'2022-02-01','shipped',1500),(2,1,'2022-05-10','shipped',300),(3,2,'2022-03-15','pending',800),
- (4,3,'2022-04-20','shipped',235),(5,4,'2022-06-01','cancelled',1200),(6,2,'2022-08-12','shipped',90),
- (7,5,'2022-09-05','pending',605),(8,1,'2022-10-01','shipped',150);
-CREATE TABLE order_items (item_id int PRIMARY KEY, order_id int, product_id int, quantity int, unit_price numeric);
-INSERT INTO order_items VALUES
- (1,1,1,1,1200),(2,1,5,1,300),(3,2,5,1,300),(4,3,2,1,800),(5,4,3,1,150),(6,4,4,1,85),
- (7,5,1,1,1200),(8,6,4,1,85),(9,7,5,2,300),(10,7,6,1,5),(11,8,3,1,150);
+DROP VIEW  IF EXISTS game_sales_report CASCADE;
+DROP TABLE IF EXISTS sessions  CASCADE;
+DROP TABLE IF EXISTS reviews   CASCADE;
+DROP TABLE IF EXISTS purchases CASCADE;
+DROP TABLE IF EXISTS games     CASCADE;
+DROP TABLE IF EXISTS players   CASCADE;
+DROP TABLE IF EXISTS studios   CASCADE;
+CREATE TABLE studios (studio_id SERIAL PRIMARY KEY, name TEXT NOT NULL, country TEXT NOT NULL, founded INT);
+CREATE TABLE games (game_id SERIAL PRIMARY KEY, title TEXT NOT NULL, genre TEXT NOT NULL, studio_id INT REFERENCES studios(studio_id), price NUMERIC(6,2) NOT NULL, release_year INT, multiplayer BOOLEAN NOT NULL DEFAULT FALSE);
+CREATE TABLE players (player_id SERIAL PRIMARY KEY, username TEXT NOT NULL, country TEXT NOT NULL, joined INT, premium BOOLEAN NOT NULL DEFAULT FALSE);
+CREATE TABLE purchases (purchase_id SERIAL PRIMARY KEY, player_id INT NOT NULL REFERENCES players(player_id), game_id INT NOT NULL REFERENCES games(game_id), purchased_on DATE NOT NULL, amount_paid NUMERIC(6,2) NOT NULL);
+CREATE TABLE reviews (review_id SERIAL PRIMARY KEY, game_id INT NOT NULL REFERENCES games(game_id), player_id INT NOT NULL REFERENCES players(player_id), rating INT CHECK (rating BETWEEN 1 AND 5), body TEXT NOT NULL, posted_on DATE NOT NULL);
+CREATE TABLE sessions (session_id SERIAL PRIMARY KEY, player_id INT NOT NULL REFERENCES players(player_id), game_id INT NOT NULL REFERENCES games(game_id), played_on DATE NOT NULL, duration_min INT NOT NULL, score INT NOT NULL);
+INSERT INTO studios (studio_id, name, country, founded) VALUES
+  (1,'Orbit Games','Germany',2012),(2,'Mythos Studio','UK',2009),(3,'Cortex Labs','Spain',2015);
+INSERT INTO games (game_id, title, genre, studio_id, price, release_year, multiplayer) VALUES
+  (1,'Nebula Raiders','Shooter',1,29.99,2021,TRUE),(2,'Kingdom of Ash','RPG',2,49.99,2022,TRUE),
+  (3,'Pixel Racer','Racing',1,0.00,2020,TRUE),(4,'Mind Maze','Puzzle',3,9.99,2019,FALSE),
+  (5,'Frostbite Frontier','Survival',2,24.99,2023,TRUE),(6,'Galaxy Builder','Strategy',3,19.99,2021,FALSE),
+  (7,'Shadow Clash','Shooter',1,0.00,2022,TRUE),(8,'Dragon Tactics','RPG',2,39.99,2020,FALSE),
+  (9,'Block Stacker','Puzzle',3,4.99,2018,FALSE),(10,'Turbo Drift','Racing',1,14.99,2023,TRUE),
+  (11,'Empire Rising','Strategy',2,34.99,2024,TRUE),(12,'Lost Expedition','Survival',3,22.50,2024,FALSE);
+INSERT INTO players (player_id, username, country, joined, premium) VALUES
+  (101,'shadowfox','Germany',2020,TRUE),(102,'ninaplays','Germany',2021,FALSE),
+  (103,'carlos_v','Spain',2019,TRUE),(104,'dave99','UK',2022,FALSE),
+  (105,'elenap','Romania',2020,TRUE),(106,'farouk_a','Germany',2023,FALSE);
+INSERT INTO purchases (player_id, game_id, purchased_on, amount_paid) VALUES
+  (101,1,'2024-01-05',29.99),(101,2,'2024-01-11',44.99),(103,1,'2024-01-14',29.99),
+  (102,4,'2024-01-20',9.99),(104,10,'2024-02-01',14.99),(105,2,'2024-02-04',49.99),
+  (106,5,'2024-02-13',24.99),(103,8,'2024-02-19',39.99),(105,11,'2024-03-04',34.99),
+  (101,5,'2024-04-09',19.99),(103,8,'2024-04-19',34.99),(105,2,'2024-04-24',49.99),
+  (104,6,'2024-05-01',19.99),(102,8,'2024-05-10',39.99);
+INSERT INTO reviews (game_id, player_id, rating, body, posted_on) VALUES
+  (1,101,5,'Fast paced space shooter with stunning visuals and tight controls. The multiplayer battles are intense and addictive.','2024-01-20'),
+  (1,103,4,'Solid shooter, great space combat, though the campaign feels short. Multiplayer carries it.','2024-01-25'),
+  (2,101,5,'An epic fantasy RPG with deep story and rich world building. Hundreds of hours of quests and dragons.','2024-02-01'),
+  (2,105,4,'Beautiful RPG world and a memorable story, but the combat gets repetitive after a while.','2024-02-15'),
+  (5,106,4,'Brutal survival game set in a frozen wilderness. Crafting and exploration are deeply rewarding.','2024-03-01'),
+  (8,103,5,'Tactical RPG with dragons and clever turn-based combat. Challenging strategy at every battle.','2024-03-10'),
+  (4,102,3,'A relaxing puzzle game, decent brain teasers but it gets a bit boring after the first hour.','2024-03-22'),
+  (11,105,5,'Grand strategy at its finest. Build an empire, wage war, manage resources. Endlessly replayable.','2024-04-05'),
+  (10,104,3,'Arcade racing fun but the track variety is limited. Drifting feels great though.','2024-04-18'),
+  (7,102,4,'Free to play shooter that is surprisingly polished. Frantic multiplayer firefights everywhere.','2024-05-02'),
+  (6,104,4,'Clever space strategy game. Building a galaxy spanning civilization is very satisfying.','2024-05-12');
+INSERT INTO sessions (player_id, game_id, played_on, duration_min, score) VALUES
+  (101,1,'2024-01-10',45,1200),(101,2,'2024-01-12',120,3400),(103,1,'2024-01-15',30,900),
+  (102,7,'2024-01-18',60,1500),(104,3,'2024-02-02',25,400),(105,2,'2024-02-05',90,2800),
+  (101,1,'2024-02-09',50,1600),(106,5,'2024-02-14',75,2100),(103,8,'2024-02-20',110,3000),
+  (102,7,'2024-03-01',40,1100),(105,11,'2024-03-05',130,4200),(104,10,'2024-03-08',35,700),
+  (101,2,'2024-03-12',95,2600),(106,1,'2024-03-15',55,1400),(103,1,'2024-03-20',60,1800),
+  (102,4,'2024-03-25',20,600),(105,11,'2024-04-01',140,4500),(104,3,'2024-04-04',30,500),
+  (101,5,'2024-04-10',80,2300),(106,7,'2024-04-15',45,1300),(103,8,'2024-04-20',105,2900),
+  (105,2,'2024-04-25',100,3100),(102,7,'2024-05-02',65,1700),(101,1,'2024-05-08',40,1250),
+  (104,10,'2024-05-12',50,950);
+CREATE VIEW game_sales_report AS
+SELECT p.purchase_id, pl.username, pl.country AS player_country, pl.premium,
+       g.title AS game_title, g.genre, s.name AS studio, s.country AS studio_country,
+       p.purchased_on, p.amount_paid
+FROM purchases p
+JOIN players pl ON pl.player_id = p.player_id
+JOIN games g ON g.game_id = p.game_id
+JOIN studios s ON s.studio_id = g.studio_id;
 `;
 
 const MONGO_SEED = {
-  books: [
-    {title:'Dune',author:'Herbert',year:1965,price:15,pages:412,rating:5,publisher:'Ace',inStock:false,genres:['sci-fi','classic']},
-    {title:'Foundation',author:'Asimov',year:1951,price:12,pages:255,rating:5,publisher:'Spectra',inStock:true,genres:['sci-fi','classic']},
-    {title:'I, Robot',author:'Asimov',year:1950,price:10,pages:253,rating:4,publisher:'Spectra',inStock:true,genres:['sci-fi']},
-    {title:'The Gods Themselves',author:'Asimov',year:1972,price:11,pages:288,rating:4,publisher:'Doubleday',inStock:true,genres:['sci-fi']},
-    {title:'Starship',author:'Asimov',year:1973,price:8,pages:180,rating:1,publisher:'Spectra',inStock:false,genres:['sci-fi']},
-    {title:'The Hobbit',author:'Tolkien',year:1937,price:20,pages:310,rating:5,publisher:'Allen',inStock:true,genres:['fantasy','classic']},
-    {title:'The Lord of the Rings',author:'Tolkien',year:1954,price:30,pages:1178,rating:5,publisher:'Allen',inStock:true,genres:['fantasy','classic']},
-    {title:'Neuromancer',author:'Gibson',year:1984,price:14,pages:271,rating:4,publisher:'Ace',inStock:true,genres:['sci-fi','cyberpunk']},
-    {title:'War and Peace',author:'Tolstoy',year:1869,price:25,pages:1225,rating:4,publisher:'Penguin',inStock:false,genres:['classic']},
-    {title:'1984',author:'Orwell',year:1949,price:9,pages:328,rating:5,publisher:'Penguin',inStock:true,genres:['classic','dystopia']},
-    {title:'Brave New World',author:'Huxley',year:1932,price:11,pages:311,rating:4,publisher:'Vintage',inStock:true,genres:['classic','dystopia']},
-    {title:'The Martian',author:'Weir',year:2011,price:13,pages:369,rating:4,publisher:'Crown',inStock:true,genres:['sci-fi']},
-    {title:'Hyperion',author:'Simmons',year:1989,price:16,pages:482,rating:4,publisher:'Spectra',inStock:true,genres:['sci-fi']},
-    {title:'Untitled Draft',author:'Anon',year:2020,price:5,pages:50,rating:3,inStock:false,genres:['draft']}
+  games: [
+    {_id:1,title:'Nebula Raiders',genre:'Shooter',studio:'Orbit Games',price:29.99,releaseYear:2021,multiplayer:true},
+    {_id:2,title:'Kingdom of Ash',genre:'RPG',studio:'Mythos Studio',price:49.99,releaseYear:2022,multiplayer:true},
+    {_id:3,title:'Pixel Racer',genre:'Racing',studio:'Orbit Games',price:0,releaseYear:2020,multiplayer:true},
+    {_id:4,title:'Mind Maze',genre:'Puzzle',studio:'Cortex Labs',price:9.99,releaseYear:2019,multiplayer:false},
+    {_id:5,title:'Frostbite Frontier',genre:'Survival',studio:'Mythos Studio',price:24.99,releaseYear:2023,multiplayer:true},
+    {_id:6,title:'Galaxy Builder',genre:'Strategy',studio:'Cortex Labs',price:19.99,releaseYear:2021,multiplayer:false},
+    {_id:7,title:'Shadow Clash',genre:'Shooter',studio:'Orbit Games',price:0,releaseYear:2022,multiplayer:true},
+    {_id:8,title:'Dragon Tactics',genre:'RPG',studio:'Mythos Studio',price:39.99,releaseYear:2020,multiplayer:false},
+    {_id:9,title:'Block Stacker',genre:'Puzzle',studio:'Cortex Labs',price:4.99,releaseYear:2018,multiplayer:false},
+    {_id:10,title:'Turbo Drift',genre:'Racing',studio:'Orbit Games',price:14.99,releaseYear:2023,multiplayer:true},
+    {_id:11,title:'Empire Rising',genre:'Strategy',studio:'Mythos Studio',price:34.99,releaseYear:2024,multiplayer:true},
+    {_id:12,title:'Lost Expedition',genre:'Survival',studio:'Cortex Labs',price:22.50,releaseYear:2024,multiplayer:false}
   ],
-  authors: [
-    {name:'Herbert',country:'USA'},{name:'Asimov',country:'USA'},{name:'Tolkien',country:'UK'},
-    {name:'Gibson',country:'USA'},{name:'Tolstoy',country:'Russia'},{name:'Orwell',country:'UK'},
-    {name:'Huxley',country:'UK'},{name:'Weir',country:'USA'},{name:'Simmons',country:'USA'},{name:'Anon',country:'NA'}
+  players: [
+    {_id:101,username:'shadowfox',country:'Germany',joined:2020,premium:true},
+    {_id:102,username:'ninaplays',country:'Germany',joined:2021,premium:false},
+    {_id:103,username:'carlos_v',country:'Spain',joined:2019,premium:true},
+    {_id:104,username:'dave99',country:'UK',joined:2022,premium:false},
+    {_id:105,username:'elenap',country:'Romania',joined:2020,premium:true},
+    {_id:106,username:'farouk_a',country:'Germany',joined:2023,premium:false}
   ],
-  reviews: [
-    {book:'Dune',user:'Anna',rating:5,helpful:12},
-    {book:'Dune',user:'Ben',rating:4,helpful:3},
-    {book:'Foundation',user:'Cara',rating:5,helpful:8},
-    {book:'1984',user:'Anna',rating:5,helpful:20},
-    {book:'1984',user:'Dino',rating:4,helpful:5},
-    {book:'The Hobbit',user:'Ela',rating:5,helpful:7},
-    {book:'The Martian',user:'Ben',rating:4,helpful:2},
-    {book:'Neuromancer',user:'Cara',rating:3,helpful:1},
-    {book:'Dune',user:'Dino',rating:5,helpful:9},
-    {book:'Foundation',user:'Ela',rating:4,helpful:4}
+  sessions: [
+    {_id:5001,username:'shadowfox',country:'Germany',premium:true,gameTitle:'Nebula Raiders',genre:'Shooter',studio:'Orbit Games',playedOn:new Date('2024-01-10'),durationMin:45,score:1200,tags:['solo','casual']},
+    {_id:5002,username:'shadowfox',country:'Germany',premium:true,gameTitle:'Kingdom of Ash',genre:'RPG',studio:'Mythos Studio',playedOn:new Date('2024-01-12'),durationMin:120,score:3400,tags:['solo','ranked','streamed']},
+    {_id:5003,username:'carlos_v',country:'Spain',premium:true,gameTitle:'Nebula Raiders',genre:'Shooter',studio:'Orbit Games',playedOn:new Date('2024-01-15'),durationMin:30,score:900,tags:['solo','casual','defeat']},
+    {_id:5004,username:'ninaplays',country:'Germany',premium:false,gameTitle:'Shadow Clash',genre:'Shooter',studio:'Orbit Games',playedOn:new Date('2024-01-18'),durationMin:60,score:1500,tags:['co-op','casual','victory']},
+    {_id:5005,username:'dave99',country:'UK',premium:false,gameTitle:'Pixel Racer',genre:'Racing',studio:'Orbit Games',playedOn:new Date('2024-02-02'),durationMin:25,score:400,tags:['co-op','casual','defeat']},
+    {_id:5006,username:'elenap',country:'Romania',premium:true,gameTitle:'Kingdom of Ash',genre:'RPG',studio:'Mythos Studio',playedOn:new Date('2024-02-05'),durationMin:90,score:2800,tags:['solo','ranked','victory']},
+    {_id:5007,username:'shadowfox',country:'Germany',premium:true,gameTitle:'Nebula Raiders',genre:'Shooter',studio:'Orbit Games',playedOn:new Date('2024-02-09'),durationMin:50,score:1600,tags:['solo','ranked','victory']},
+    {_id:5008,username:'farouk_a',country:'Germany',premium:false,gameTitle:'Frostbite Frontier',genre:'Survival',studio:'Mythos Studio',playedOn:new Date('2024-02-14'),durationMin:75,score:2100,tags:['solo','casual','victory']},
+    {_id:5009,username:'carlos_v',country:'Spain',premium:true,gameTitle:'Dragon Tactics',genre:'RPG',studio:'Mythos Studio',playedOn:new Date('2024-02-20'),durationMin:110,score:3000,tags:['solo','ranked','victory','streamed']},
+    {_id:5010,username:'ninaplays',country:'Germany',premium:false,gameTitle:'Shadow Clash',genre:'Shooter',studio:'Orbit Games',playedOn:new Date('2024-03-01'),durationMin:40,score:1100,tags:['co-op','casual','defeat']},
+    {_id:5011,username:'elenap',country:'Romania',premium:true,gameTitle:'Empire Rising',genre:'Strategy',studio:'Mythos Studio',playedOn:new Date('2024-03-05'),durationMin:130,score:4200,tags:['solo','ranked','victory','streamed']},
+    {_id:5012,username:'dave99',country:'UK',premium:false,gameTitle:'Turbo Drift',genre:'Racing',studio:'Orbit Games',playedOn:new Date('2024-03-08'),durationMin:35,score:700,tags:['co-op','casual','victory']},
+    {_id:5013,username:'shadowfox',country:'Germany',premium:true,gameTitle:'Kingdom of Ash',genre:'RPG',studio:'Mythos Studio',playedOn:new Date('2024-03-12'),durationMin:95,score:2600,tags:['solo','ranked','victory']},
+    {_id:5014,username:'farouk_a',country:'Germany',premium:false,gameTitle:'Nebula Raiders',genre:'Shooter',studio:'Orbit Games',playedOn:new Date('2024-03-15'),durationMin:55,score:1400,tags:['solo','casual','victory']},
+    {_id:5015,username:'carlos_v',country:'Spain',premium:true,gameTitle:'Nebula Raiders',genre:'Shooter',studio:'Orbit Games',playedOn:new Date('2024-03-20'),durationMin:60,score:1800,tags:['co-op','ranked','victory']},
+    {_id:5016,username:'ninaplays',country:'Germany',premium:false,gameTitle:'Mind Maze',genre:'Puzzle',studio:'Cortex Labs',playedOn:new Date('2024-03-25'),durationMin:20,score:600,tags:['solo','casual','defeat']},
+    {_id:5017,username:'elenap',country:'Romania',premium:true,gameTitle:'Empire Rising',genre:'Strategy',studio:'Mythos Studio',playedOn:new Date('2024-04-01'),durationMin:140,score:4500,tags:['solo','ranked','victory','streamed']},
+    {_id:5018,username:'dave99',country:'UK',premium:false,gameTitle:'Pixel Racer',genre:'Racing',studio:'Orbit Games',playedOn:new Date('2024-04-04'),durationMin:30,score:500,tags:['co-op','casual','defeat']},
+    {_id:5019,username:'shadowfox',country:'Germany',premium:true,gameTitle:'Frostbite Frontier',genre:'Survival',studio:'Mythos Studio',playedOn:new Date('2024-04-10'),durationMin:80,score:2300,tags:['solo','casual','victory']},
+    {_id:5020,username:'farouk_a',country:'Germany',premium:false,gameTitle:'Shadow Clash',genre:'Shooter',studio:'Orbit Games',playedOn:new Date('2024-04-15'),durationMin:45,score:1300,tags:['co-op','ranked','defeat']},
+    {_id:5021,username:'carlos_v',country:'Spain',premium:true,gameTitle:'Dragon Tactics',genre:'RPG',studio:'Mythos Studio',playedOn:new Date('2024-04-20'),durationMin:105,score:2900,tags:['solo','ranked','victory']},
+    {_id:5022,username:'elenap',country:'Romania',premium:true,gameTitle:'Kingdom of Ash',genre:'RPG',studio:'Mythos Studio',playedOn:new Date('2024-04-25'),durationMin:100,score:3100,tags:['solo','ranked','victory','streamed']},
+    {_id:5023,username:'ninaplays',country:'Germany',premium:false,gameTitle:'Shadow Clash',genre:'Shooter',studio:'Orbit Games',playedOn:new Date('2024-05-02'),durationMin:65,score:1700,tags:['co-op','casual','victory']},
+    {_id:5024,username:'shadowfox',country:'Germany',premium:true,gameTitle:'Nebula Raiders',genre:'Shooter',studio:'Orbit Games',playedOn:new Date('2024-05-08'),durationMin:40,score:1250,tags:['solo','casual','victory']},
+    {_id:5025,username:'dave99',country:'UK',premium:false,gameTitle:'Turbo Drift',genre:'Racing',studio:'Orbit Games',playedOn:new Date('2024-05-12'),durationMin:50,score:950,tags:['co-op','casual','defeat']}
   ]
 };
 
+const REDIS_SEED = `SET total_students 5
+SET total_courses 4
+HSET department:CS name "Computer Science" building "Block A"
+HSET department:EE name "Electrical Engineering" building "Block B"
+HSET student:1001 name "Alice Brown" year 2 gpa 3.6 status active
+HSET student:1002 name "John Smith" year 1 gpa 3.2 status active
+HSET student:1003 name "Maria Lopez" year 3 gpa 3.9 status active
+HSET student:1004 name "Tom Becker" year 2 gpa 2.8 status active
+HSET student:1005 name "Sara Khan" year 1 gpa 3.4 status active
+HSET course:CS101 name "Data Structures" credits 6
+HSET course:CS102 name "Databases" credits 6
+HSET course:EE201 name "Circuits" credits 5
+HSET course:CS103 name "Algorithms" credits 6
+HSET instructor:5001 name "Dr. Miller" title "Professor"
+HSET instructor:5002 name "Dr. Novak" title "Lecturer"
+SADD university:departments CS EE
+SADD department:CS:students 1001 1002 1003 1004
+SADD department:EE:students 1005
+SADD department:CS:courses CS101 CS102 CS103
+SADD department:EE:courses EE201
+SADD student:1001:courses CS101 CS102
+SADD student:1002:courses CS101
+SADD student:1003:courses CS101 CS102 CS103
+SADD student:1004:courses CS103
+SADD student:1005:courses EE201
+SADD course:CS101:students 1001 1002 1003
+SADD course:CS102:students 1001 1003
+SADD course:CS103:students 1003 1004
+SADD course:EE201:students 1005
+SET course:CS101:instructor 5001
+SET course:CS102:instructor 5001
+SET course:CS103:instructor 5002
+SET course:EE201:instructor 5002
+RPUSH student:1001:activity "Logged in"
+RPUSH student:1001:activity "Viewed course CS101"
+RPUSH student:1001:activity "Enrolled in CS101"
+RPUSH student:1001:activity "Enrolled in CS102"
+ZADD course:CS101:grades 88 1001 75 1002 91 1003
+ZADD course:CS102:grades 84 1001 95 1003
+ZADD course:CS103:grades 67 1003 82 1004
+SET session:1001 active EX 1800`;
 function redisSeed(){
   const db = Object.create(null);
-  db['pageviews']={t:'str',v:'100'};
-  db['config:title']={t:'str',v:'Welcome'};
-  db['user:100']={t:'hash',v:{name:'Alice',email:'[email protected]',age:'30',city:'NYC'}};
-  db['queue:emails']={t:'list',v:['job1','job2','job3']};
-  db['online:users']={t:'set',v:new Set(['u1','u2','u3'])};
-  db['premium:users']={t:'set',v:new Set(['u2','u4'])};
-  db['scores']={t:'zset',v:new Map([['player1',100],['player2',250],['player3',175]])};
-  db['bonus']={t:'zset',v:new Map([['player1',50],['player2',20]])};
-  db['session:abc']={t:'str',v:'tok',ttl:300};
-  db['bitmap']={t:'bits',v:new Set()};
-  db['hll:visitors']={t:'hll',v:new Set()};
+  REDIS_SEED.split(/\n+/).map(l=>l.trim()).filter(Boolean).forEach(line=>{ try{ execRedisLine(db, tokenize(line)); }catch(e){} });
   return db;
 }
 
@@ -130,10 +190,10 @@ async function initPG(){
 }
 async function pgReseed(){ await pg.exec(PG_SEED); }
 async function pgSnapshot(){
-  const t1 = await pg.query('SELECT * FROM employees ORDER BY emp_id');
-  const t2 = await pg.query('SELECT * FROM departments ORDER BY dept_id');
-  const t3 = await pg.query('SELECT * FROM projects ORDER BY proj_id');
-  return JSON.stringify([t1.rows,t2.rows,t3.rows]);
+  try{
+    const q = async s => (await pg.query(s)).rows;
+    return JSON.stringify([await q('SELECT * FROM games ORDER BY game_id'), await q('SELECT * FROM players ORDER BY player_id'), await q('SELECT * FROM purchases ORDER BY purchase_id')]);
+  }catch(e){ return ''; }
 }
 async function pgRun(sql){
   // returns {rows, fields, state, error}
@@ -266,7 +326,7 @@ function execRedisLine(db, args){
   const cmd=args[0].toUpperCase(), k=args[1];
   const get=(key)=>db[key];
   switch(cmd){
-    case 'SET': db[k]={t:'str',v:args[2]}; return 'OK';
+    case 'SET': { db[k]={t:'str',v:args[2]}; for(let i=3;i<args.length-1;i++){ const f=(args[i]||'').toUpperCase(); if(f==='EX')db[k].ttl=+args[i+1]; else if(f==='PX')db[k].ttl=(+args[i+1])/1000; } return 'OK'; }
     case 'SETNX': if(db[k])return 0; db[k]={t:'str',v:args[2]}; return 1;
     case 'SETEX': db[k]={t:'str',v:args[3],ttl:asNum(args[2])}; return 'OK';
     case 'GET': return get(k)? String(get(k).v):null;
@@ -379,6 +439,317 @@ function eqArr(a,b){ return a.length===b.length && a.every((x,i)=>x===b[i]); }
 
 /* ================= TASKS (p, db, prompt, model answer) ================= */
 const TASKS_RAW = [
+/* PG BEGINNER (gamehub) */
+[1,'pg',`Show all games.`,`SELECT * FROM games;`],
+[1,'pg',`Show all studios.`,`SELECT * FROM studios;`],
+[1,'pg',`Show all players.`,`SELECT * FROM players;`],
+[1,'pg',`Find games in the 'Shooter' genre.`,`SELECT * FROM games WHERE genre = 'Shooter';`],
+[1,'pg',`Find games priced above 20.`,`SELECT * FROM games WHERE price > 20;`],
+[1,'pg',`Find the free games (price = 0).`,`SELECT * FROM games WHERE price = 0;`],
+[1,'pg',`Find all multiplayer games.`,`SELECT * FROM games WHERE multiplayer = TRUE;`],
+[1,'pg',`Find games released in 2024.`,`SELECT * FROM games WHERE release_year = 2024;`],
+[1,'pg',`List games ordered by price, highest first.`,`SELECT * FROM games ORDER BY price DESC;`],
+[1,'pg',`Show the 5 most expensive games.`,`SELECT * FROM games ORDER BY price DESC LIMIT 5;`],
+[1,'pg',`Count how many games there are.`,`SELECT COUNT(*) FROM games;`],
+[1,'pg',`Count how many players there are.`,`SELECT COUNT(*) FROM players;`],
+[1,'pg',`Find all premium players.`,`SELECT * FROM players WHERE premium = TRUE;`],
+[1,'pg',`Find players from 'Germany'.`,`SELECT * FROM players WHERE country = 'Germany';`],
+[1,'pg',`Find players who joined before 2021.`,`SELECT * FROM players WHERE joined < 2021;`],
+[1,'pg',`List the distinct game genres.`,`SELECT DISTINCT genre FROM games;`],
+[1,'pg',`List the distinct player countries.`,`SELECT DISTINCT country FROM players;`],
+[1,'pg',`Find studios from the 'UK'.`,`SELECT * FROM studios WHERE country = 'UK';`],
+[1,'pg',`Find studios founded after 2010.`,`SELECT * FROM studios WHERE founded > 2010;`],
+[1,'pg',`Find the average game price.`,`SELECT AVG(price) FROM games;`],
+[1,'pg',`Find the highest game price.`,`SELECT MAX(price) FROM games;`],
+[1,'pg',`Find the lowest game price.`,`SELECT MIN(price) FROM games;`],
+[1,'pg',`Show all purchases.`,`SELECT * FROM purchases;`],
+[1,'pg',`Find purchases where more than 30 was paid.`,`SELECT * FROM purchases WHERE amount_paid > 30;`],
+[1,'pg',`Show all reviews.`,`SELECT * FROM reviews;`],
+[1,'pg',`Find reviews with a rating of 5.`,`SELECT * FROM reviews WHERE rating = 5;`],
+[1,'pg',`Count how many reviews there are.`,`SELECT COUNT(*) FROM reviews;`],
+[1,'pg',`Show all sessions.`,`SELECT * FROM sessions;`],
+[1,'pg',`Find sessions that scored over 2000.`,`SELECT * FROM sessions WHERE score > 2000;`],
+[1,'pg',`Find sessions longer than 60 minutes.`,`SELECT * FROM sessions WHERE duration_min > 60;`],
+[1,'pg',`Show only the title of every game.`,`SELECT title FROM games;`],
+[1,'pg',`Show the username and country of every player.`,`SELECT username, country FROM players;`],
+[1,'pg',`Count how many games are in each genre.`,`SELECT genre, COUNT(*) FROM games GROUP BY genre;`],
+[1,'pg',`Count how many players are from each country.`,`SELECT country, COUNT(*) FROM players GROUP BY country;`],
+[1,'pg',`List games ordered by release_year (oldest first).`,`SELECT * FROM games ORDER BY release_year;`],
+[1,'pg',`List sessions ordered by score, highest first.`,`SELECT * FROM sessions ORDER BY score DESC;`],
+[1,'pg',`Count how many distinct genres exist.`,`SELECT COUNT(DISTINCT genre) FROM games;`],
+[1,'pg',`Find the total amount paid across all purchases.`,`SELECT SUM(amount_paid) FROM purchases;`],
+[1,'pg',`Find the average session score.`,`SELECT AVG(score) FROM sessions;`],
+[1,'pg',`List reviews from newest to oldest.`,`SELECT * FROM reviews ORDER BY posted_on DESC;`],
+/* PG INTERMEDIATE (gamehub) */
+[2,'pg',`Show each game title with its studio name (join).`,`SELECT g.title, s.name FROM games g JOIN studios s ON g.studio_id = s.studio_id;`],
+[2,'pg',`Show purchases with the player username and game title.`,`SELECT pl.username, g.title FROM purchases p JOIN players pl ON p.player_id = pl.player_id JOIN games g ON p.game_id = g.game_id;`],
+[2,'pg',`Total revenue (sum of amount_paid) per game_id.`,`SELECT game_id, SUM(amount_paid) FROM purchases GROUP BY game_id;`],
+[2,'pg',`Revenue per game INCLUDING games never purchased (show 0, not dropped).`,`SELECT g.title, COALESCE(SUM(p.amount_paid),0) AS revenue FROM games g LEFT JOIN purchases p ON p.game_id = g.game_id GROUP BY g.title;`],
+[2,'pg',`Number of purchases per player.`,`SELECT player_id, COUNT(*) FROM purchases GROUP BY player_id;`],
+[2,'pg',`Players who bought more than 2 games.`,`SELECT player_id FROM purchases GROUP BY player_id HAVING COUNT(*) > 2;`],
+[2,'pg',`Average rating per game.`,`SELECT game_id, AVG(rating) FROM reviews GROUP BY game_id;`],
+[2,'pg',`Games whose average rating is 4.5 or higher.`,`SELECT game_id FROM reviews GROUP BY game_id HAVING AVG(rating) >= 4.5;`],
+[2,'pg',`Total play time (duration) per player.`,`SELECT player_id, SUM(duration_min) FROM sessions GROUP BY player_id;`],
+[2,'pg',`Total session score per game.`,`SELECT game_id, SUM(score) FROM sessions GROUP BY game_id;`],
+[2,'pg',`Number of sessions per game.`,`SELECT game_id, COUNT(*) FROM sessions GROUP BY game_id;`],
+[2,'pg',`Show each game title with its studio country.`,`SELECT g.title, s.country FROM games g JOIN studios s ON g.studio_id = s.studio_id;`],
+[2,'pg',`Total revenue per studio name.`,`SELECT s.name, SUM(p.amount_paid) FROM purchases p JOIN games g ON p.game_id = g.game_id JOIN studios s ON g.studio_id = s.studio_id GROUP BY s.name;`],
+[2,'pg',`Average game price per genre.`,`SELECT genre, AVG(price) FROM games GROUP BY genre;`],
+[2,'pg',`Genres that have more than 2 games.`,`SELECT genre FROM games GROUP BY genre HAVING COUNT(*) > 2;`],
+[2,'pg',`Players who never made a purchase.`,`SELECT pl.* FROM players pl LEFT JOIN purchases p ON pl.player_id = p.player_id WHERE p.purchase_id IS NULL;`],
+[2,'pg',`Games that were never reviewed.`,`SELECT g.* FROM games g LEFT JOIN reviews r ON g.game_id = r.game_id WHERE r.review_id IS NULL;`],
+[2,'pg',`Number of reviews per game.`,`SELECT game_id, COUNT(*) FROM reviews GROUP BY game_id;`],
+[2,'pg',`The player with the most sessions.`,`SELECT player_id, COUNT(*) FROM sessions GROUP BY player_id ORDER BY COUNT(*) DESC LIMIT 1;`],
+[2,'pg',`Average session duration per genre.`,`SELECT g.genre, AVG(s.duration_min) FROM sessions s JOIN games g ON s.game_id = g.game_id GROUP BY g.genre;`],
+[2,'pg',`Total spend per premium player username.`,`SELECT pl.username, SUM(p.amount_paid) FROM purchases p JOIN players pl ON p.player_id = pl.player_id WHERE pl.premium = TRUE GROUP BY pl.username;`],
+[2,'pg',`Number of sessions per player country.`,`SELECT pl.country, COUNT(*) FROM sessions s JOIN players pl ON s.player_id = pl.player_id GROUP BY pl.country;`],
+[2,'pg',`Total session score per genre.`,`SELECT g.genre, SUM(s.score) FROM sessions s JOIN games g ON s.game_id = g.game_id GROUP BY g.genre;`],
+[2,'pg',`Games priced above the average game price.`,`SELECT * FROM games WHERE price > (SELECT AVG(price) FROM games);`],
+[2,'pg',`Top 3 games by total session score.`,`SELECT game_id, SUM(score) AS total FROM sessions GROUP BY game_id ORDER BY total DESC LIMIT 3;`],
+[2,'pg',`Count purchases per month of purchased_on.`,`SELECT EXTRACT(MONTH FROM purchased_on) AS m, COUNT(*) FROM purchases GROUP BY m;`],
+[2,'pg',`Rank games by price (highest first) using RANK.`,`SELECT title, price, RANK() OVER (ORDER BY price DESC) AS rnk FROM games;`],
+[2,'pg',`Number each session within its game by score (highest = 1).`,`SELECT game_id, score, ROW_NUMBER() OVER (PARTITION BY game_id ORDER BY score DESC) AS rn FROM sessions;`],
+[2,'pg',`Running total of amount_paid ordered by purchased_on.`,`SELECT purchase_id, purchased_on, SUM(amount_paid) OVER (ORDER BY purchased_on) AS running FROM purchases;`],
+[2,'pg',`Average amount paid per game title.`,`SELECT g.title, AVG(p.amount_paid) FROM purchases p JOIN games g ON p.game_id = g.game_id GROUP BY g.title;`],
+[2,'pg',`Each studio with its number of games.`,`SELECT s.name, COUNT(*) FROM games g JOIN studios s ON g.studio_id = s.studio_id GROUP BY s.name;`],
+[2,'pg',`Number of distinct games each player has played.`,`SELECT player_id, COUNT(DISTINCT game_id) FROM sessions GROUP BY player_id;`],
+[2,'pg',`Total revenue per genre.`,`SELECT g.genre, SUM(p.amount_paid) FROM purchases p JOIN games g ON p.game_id = g.game_id GROUP BY g.genre;`],
+[2,'pg',`Search reviews that mention both 'space' and 'shooter'; return game title, rating, a relevance rank and the body, most relevant first.`,`SELECT g.title, r.rating, ts_rank(to_tsvector('english', r.body), to_tsquery('english','space & shooter')) AS relevance, r.body FROM reviews r JOIN games g ON r.game_id = g.game_id WHERE to_tsvector('english', r.body) @@ to_tsquery('english','space & shooter') ORDER BY relevance DESC;`],
+[2,'pg',`The game_id with the highest average rating.`,`SELECT game_id FROM reviews GROUP BY game_id ORDER BY AVG(rating) DESC LIMIT 1;`],
+[2,'pg',`Multiplayer games priced above 20.`,`SELECT * FROM games WHERE multiplayer = TRUE AND price > 20;`],
+[2,'pg',`Average session score per player.`,`SELECT player_id, AVG(score) FROM sessions GROUP BY player_id;`],
+[2,'pg',`Count of premium vs non-premium players.`,`SELECT premium, COUNT(*) FROM players GROUP BY premium;`],
+[2,'pg',`The top spender (player with the highest total amount paid).`,`SELECT player_id, SUM(amount_paid) AS spent FROM purchases GROUP BY player_id ORDER BY spent DESC LIMIT 1;`],
+[2,'pg',`Games that have more than 3 sessions.`,`SELECT game_id FROM sessions GROUP BY game_id HAVING COUNT(*) > 3;`],
+/* PG HARD (gamehub) */
+[3,'pg',`Using game_sales_report, report total revenue by genre and by genre+player_country, with a subtotal per genre and a grand total (ROLLUP).`,`SELECT genre, player_country, SUM(amount_paid) FROM game_sales_report GROUP BY ROLLUP (genre, player_country) ORDER BY genre, player_country NULLS LAST;`],
+[3,'pg',`Using game_sales_report, produce a full cross-tabulation of revenue across studio_country and premium (CUBE).`,`SELECT studio_country, premium, SUM(amount_paid) FROM game_sales_report GROUP BY CUBE (studio_country, premium) ORDER BY studio_country NULLS LAST, premium NULLS LAST;`],
+[3,'pg',`The top-earning game per genre (window, rank 1).`,`SELECT * FROM (SELECT g.genre, g.title, SUM(p.amount_paid) rev, ROW_NUMBER() OVER (PARTITION BY g.genre ORDER BY SUM(p.amount_paid) DESC) rn FROM purchases p JOIN games g ON p.game_id = g.game_id GROUP BY g.genre, g.title) t WHERE rn = 1;`],
+[3,'pg',`Each game's revenue as a percentage of its genre revenue.`,`SELECT g.title, g.genre, SUM(p.amount_paid)*100.0/SUM(SUM(p.amount_paid)) OVER (PARTITION BY g.genre) AS pct FROM purchases p JOIN games g ON p.game_id = g.game_id GROUP BY g.title, g.genre;`],
+[3,'pg',`Rank players by total spend (window).`,`SELECT player_id, SUM(amount_paid) AS spent, RANK() OVER (ORDER BY SUM(amount_paid) DESC) AS rnk FROM purchases GROUP BY player_id;`],
+[3,'pg',`For each player, their highest-scoring session.`,`SELECT * FROM (SELECT *, ROW_NUMBER() OVER (PARTITION BY player_id ORDER BY score DESC) rn FROM sessions) t WHERE rn = 1;`],
+[3,'pg',`Top 3 games by revenue within each studio.`,`SELECT * FROM (SELECT s.name studio, g.title, SUM(p.amount_paid) rev, RANK() OVER (PARTITION BY s.name ORDER BY SUM(p.amount_paid) DESC) r FROM purchases p JOIN games g ON p.game_id = g.game_id JOIN studios s ON g.studio_id = s.studio_id GROUP BY s.name, g.title) t WHERE r <= 3;`],
+[3,'pg',`Players whose total spend is above the average player spend.`,`WITH s AS (SELECT player_id, SUM(amount_paid) tot FROM purchases GROUP BY player_id) SELECT * FROM s WHERE tot > (SELECT AVG(tot) FROM s);`],
+[3,'pg',`Median session score per game using PERCENTILE_CONT.`,`SELECT game_id, PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY score) AS median FROM sessions GROUP BY game_id;`],
+[3,'pg',`Running cumulative revenue ordered by purchased_on.`,`SELECT purchased_on, SUM(amount_paid) OVER (ORDER BY purchased_on) AS cumulative FROM purchases;`],
+[3,'pg',`The game played by the most distinct players.`,`SELECT game_id, COUNT(DISTINCT player_id) AS players FROM sessions GROUP BY game_id ORDER BY players DESC LIMIT 1;`],
+[3,'pg',`Each genre's most expensive game (window).`,`SELECT * FROM (SELECT genre, title, price, ROW_NUMBER() OVER (PARTITION BY genre ORDER BY price DESC) rn FROM games) t WHERE rn = 1;`],
+[3,'pg',`3-row moving average of session score ordered by played_on.`,`SELECT played_on, score, AVG(score) OVER (ORDER BY played_on ROWS BETWEEN 2 PRECEDING AND CURRENT ROW) AS moving_avg FROM sessions;`],
+[3,'pg',`Games whose average rating is above the overall average rating.`,`SELECT game_id FROM reviews GROUP BY game_id HAVING AVG(rating) > (SELECT AVG(rating) FROM reviews);`],
+[3,'pg',`Total revenue per month of purchased_on, chronological.`,`SELECT EXTRACT(MONTH FROM purchased_on) AS m, SUM(amount_paid) FROM purchases GROUP BY m ORDER BY m;`],
+[3,'pg',`Split games into 4 price quartiles using NTILE.`,`SELECT title, price, NTILE(4) OVER (ORDER BY price) AS quartile FROM games;`],
+[3,'pg',`Difference between a game's price and its genre average.`,`SELECT title, genre, price - AVG(price) OVER (PARTITION BY genre) AS diff FROM games;`],
+[3,'pg',`The player who wrote the most reviews.`,`SELECT player_id, COUNT(*) FROM reviews GROUP BY player_id ORDER BY COUNT(*) DESC LIMIT 1;`],
+[3,'pg',`Pairs of games with the same price in different genres.`,`SELECT a.title, b.title FROM games a JOIN games b ON a.price = b.price AND a.genre <> b.genre AND a.game_id < b.game_id;`],
+[3,'pg',`Per studio: total revenue and number of games, only studios with revenue above 100.`,`WITH s AS (SELECT st.name, SUM(p.amount_paid) rev, COUNT(DISTINCT g.game_id) games FROM purchases p JOIN games g ON p.game_id = g.game_id JOIN studios st ON g.studio_id = st.studio_id GROUP BY st.name) SELECT * FROM s WHERE rev > 100;`],
+/* MONGO BEGINNER (gamehub) */
+[1,'mongo',`Find all games.`,`db.games.find()`],
+[1,'mongo',`Find games in the 'Shooter' genre.`,`db.games.find({ genre: 'Shooter' })`],
+[1,'mongo',`Find games priced above 20.`,`db.games.find({ price: { $gt: 20 } })`],
+[1,'mongo',`Find all multiplayer games.`,`db.games.find({ multiplayer: true })`],
+[1,'mongo',`Find games released in 2024.`,`db.games.find({ releaseYear: 2024 })`],
+[1,'mongo',`Find the free games (price 0).`,`db.games.find({ price: 0 })`],
+[1,'mongo',`List games sorted by price, highest first.`,`db.games.find().sort({ price: -1 })`],
+[1,'mongo',`Show the 5 most expensive games.`,`db.games.find().sort({ price: -1 }).limit(5)`],
+[1,'mongo',`Count how many games there are.`,`db.games.countDocuments()`],
+[1,'mongo',`List the distinct genres.`,`db.games.distinct('genre')`],
+[1,'mongo',`List the distinct studios.`,`db.games.distinct('studio')`],
+[1,'mongo',`Show only the title of every game.`,`db.games.find({}, { title: 1 })`],
+[1,'mongo',`Find multiplayer RPG games.`,`db.games.find({ genre: 'RPG', multiplayer: true })`],
+[1,'mongo',`Find all players.`,`db.players.find()`],
+[1,'mongo',`Find premium players.`,`db.players.find({ premium: true })`],
+[1,'mongo',`Find players from 'Germany'.`,`db.players.find({ country: 'Germany' })`],
+[1,'mongo',`Find players who joined before 2021.`,`db.players.find({ joined: { $lt: 2021 } })`],
+[1,'mongo',`Count how many players there are.`,`db.players.countDocuments()`],
+[1,'mongo',`Show username and country of every player.`,`db.players.find({}, { username: 1, country: 1 })`],
+[1,'mongo',`List the distinct player countries.`,`db.players.distinct('country')`],
+[1,'mongo',`Find all sessions.`,`db.sessions.find()`],
+[1,'mongo',`Find sessions of the game 'Nebula Raiders'.`,`db.sessions.find({ gameTitle: 'Nebula Raiders' })`],
+[1,'mongo',`Find sessions that scored over 2000.`,`db.sessions.find({ score: { $gt: 2000 } })`],
+[1,'mongo',`Find sessions longer than 60 minutes.`,`db.sessions.find({ durationMin: { $gt: 60 } })`],
+[1,'mongo',`Find sessions of RPG games.`,`db.sessions.find({ genre: 'RPG' })`],
+[1,'mongo',`Find sessions by premium players.`,`db.sessions.find({ premium: true })`],
+[1,'mongo',`List sessions sorted by score, highest first.`,`db.sessions.find().sort({ score: -1 })`],
+[1,'mongo',`Show the 3 highest-scoring sessions.`,`db.sessions.find().sort({ score: -1 }).limit(3)`],
+[1,'mongo',`Count how many sessions there are.`,`db.sessions.countDocuments()`],
+[1,'mongo',`Find sessions from 'Spain'.`,`db.sessions.find({ country: 'Spain' })`],
+[1,'mongo',`Find sessions tagged 'victory'.`,`db.sessions.find({ tags: 'victory' })`],
+[1,'mongo',`Find sessions tagged 'ranked'.`,`db.sessions.find({ tags: 'ranked' })`],
+[1,'mongo',`Find games priced below 10.`,`db.games.find({ price: { $lt: 10 } })`],
+[1,'mongo',`Find games made by 'Orbit Games'.`,`db.games.find({ studio: 'Orbit Games' })`],
+[1,'mongo',`Find non-premium players.`,`db.players.find({ premium: false })`],
+[1,'mongo',`Show username and score of every session.`,`db.sessions.find({}, { username: 1, score: 1 })`],
+[1,'mongo',`Find sessions scoring between 1000 and 2000 inclusive.`,`db.sessions.find({ score: { $gte: 1000, $lte: 2000 } })`],
+[1,'mongo',`Find games in the 'Shooter' or 'Racing' genre.`,`db.games.find({ genre: { $in: ['Shooter','Racing'] } })`],
+[1,'mongo',`Find sessions tagged 'streamed'.`,`db.sessions.find({ tags: 'streamed' })`],
+[1,'mongo',`Find single-player (non-multiplayer) games.`,`db.games.find({ multiplayer: false })`],
+/* MONGO INTERMEDIATE (gamehub) */
+[2,'mongo',`Count sessions per game title.`,`db.sessions.aggregate([ { $group: { _id: '$gameTitle', n: { $sum: 1 } } } ])`],
+[2,'mongo',`Average score per game title.`,`db.sessions.aggregate([ { $group: { _id: '$gameTitle', avgScore: { $avg: '$score' } } } ])`],
+[2,'mongo',`Total play time per player.`,`db.sessions.aggregate([ { $group: { _id: '$username', total: { $sum: '$durationMin' } } } ])`],
+[2,'mongo',`Count sessions per genre.`,`db.sessions.aggregate([ { $group: { _id: '$genre', n: { $sum: 1 } } } ])`],
+[2,'mongo',`Average score per genre.`,`db.sessions.aggregate([ { $group: { _id: '$genre', avgScore: { $avg: '$score' } } } ])`],
+[2,'mongo',`The 3 games with the highest total score.`,`db.sessions.aggregate([ { $group: { _id: '$gameTitle', totalScore: { $sum: '$score' } } }, { $sort: { totalScore: -1 } }, { $limit: 3 } ])`],
+[2,'mongo',`Count sessions per player country.`,`db.sessions.aggregate([ { $group: { _id: '$country', n: { $sum: 1 } } } ])`],
+[2,'mongo',`Count games per studio.`,`db.games.aggregate([ { $group: { _id: '$studio', n: { $sum: 1 } } } ])`],
+[2,'mongo',`Average game price per genre.`,`db.games.aggregate([ { $group: { _id: '$genre', avg: { $avg: '$price' } } } ])`],
+[2,'mongo',`Total score per player.`,`db.sessions.aggregate([ { $group: { _id: '$username', total: { $sum: '$score' } } } ])`],
+[2,'mongo',`Number of sessions per player.`,`db.sessions.aggregate([ { $group: { _id: '$username', n: { $sum: 1 } } } ])`],
+[2,'mongo',`For every distinct tag, count how many sessions contain it, most common first.`,`db.sessions.aggregate([ { $unwind: '$tags' }, { $group: { _id: '$tags', count: { $sum: 1 } } }, { $sort: { count: -1 } } ])`],
+[2,'mongo',`Average session duration per genre.`,`db.sessions.aggregate([ { $group: { _id: '$genre', avgDur: { $avg: '$durationMin' } } } ])`],
+[2,'mongo',`Premium players only: total score per country, highest first.`,`db.sessions.aggregate([ { $match: { premium: true } }, { $group: { _id: '$country', totalScore: { $sum: '$score' } } }, { $sort: { totalScore: -1 } } ])`],
+[2,'mongo',`Count sessions grouped by premium.`,`db.sessions.aggregate([ { $group: { _id: '$premium', n: { $sum: 1 } } } ])`],
+[2,'mongo',`Maximum score per game.`,`db.sessions.aggregate([ { $group: { _id: '$gameTitle', maxScore: { $max: '$score' } } } ])`],
+[2,'mongo',`Minimum session duration per game.`,`db.sessions.aggregate([ { $group: { _id: '$gameTitle', minDur: { $min: '$durationMin' } } } ])`],
+[2,'mongo',`Count sessions per studio.`,`db.sessions.aggregate([ { $group: { _id: '$studio', n: { $sum: 1 } } } ])`],
+[2,'mongo',`Count games per genre (games collection).`,`db.games.aggregate([ { $group: { _id: '$genre', n: { $sum: 1 } } } ])`],
+[2,'mongo',`Average game price per studio.`,`db.games.aggregate([ { $group: { _id: '$studio', avg: { $avg: '$price' } } } ])`],
+[2,'mongo',`Total session score per game, highest first.`,`db.sessions.aggregate([ { $group: { _id: '$gameTitle', total: { $sum: '$score' } } }, { $sort: { total: -1 } } ])`],
+[2,'mongo',`Count multiplayer vs single-player games.`,`db.games.aggregate([ { $group: { _id: '$multiplayer', n: { $sum: 1 } } } ])`],
+[2,'mongo',`Number of distinct players per game.`,`db.sessions.aggregate([ { $group: { _id: '$gameTitle', players: { $addToSet: '$username' } } }, { $project: { n: { $size: '$players' } } } ])`],
+[2,'mongo',`Top 5 sessions by duration (username and durationMin).`,`db.sessions.find({}, { username: 1, durationMin: 1 }).sort({ durationMin: -1 }).limit(5)`],
+[2,'mongo',`Count sessions per calendar month.`,`db.sessions.aggregate([ { $group: { _id: { $dateToString: { format: '%Y-%m', date: '$playedOn' } }, n: { $sum: 1 } } }, { $sort: { _id: 1 } } ])`],
+[2,'mongo',`Count players per join year.`,`db.players.aggregate([ { $group: { _id: '$joined', n: { $sum: 1 } } } ])`],
+[2,'mongo',`Total score per tag.`,`db.sessions.aggregate([ { $unwind: '$tags' }, { $group: { _id: '$tags', score: { $sum: '$score' } } } ])`],
+[2,'mongo',`Average score of 'victory' sessions.`,`db.sessions.aggregate([ { $match: { tags: 'victory' } }, { $group: { _id: null, avg: { $avg: '$score' } } } ])`],
+[2,'mongo',`Count 'ranked' sessions.`,`db.sessions.countDocuments({ tags: 'ranked' })`],
+[2,'mongo',`Find games priced between 10 and 30.`,`db.games.find({ price: { $gte: 10, $lte: 30 } })`],
+[2,'mongo',`Maximum score per player.`,`db.sessions.aggregate([ { $group: { _id: '$username', max: { $max: '$score' } } } ])`],
+[2,'mongo',`Genres ordered by number of sessions, most first.`,`db.sessions.aggregate([ { $group: { _id: '$genre', n: { $sum: 1 } } }, { $sort: { n: -1 } } ])`],
+[2,'mongo',`Average session duration for premium players.`,`db.sessions.aggregate([ { $match: { premium: true } }, { $group: { _id: null, avg: { $avg: '$durationMin' } } } ])`],
+[2,'mongo',`Number of distinct genres each player played.`,`db.sessions.aggregate([ { $group: { _id: '$username', genres: { $addToSet: '$genre' } } }, { $project: { n: { $size: '$genres' } } } ])`],
+[2,'mongo',`Total play time per genre.`,`db.sessions.aggregate([ { $group: { _id: '$genre', total: { $sum: '$durationMin' } } } ])`],
+[2,'mongo',`Studios ordered by number of games, most first.`,`db.games.aggregate([ { $group: { _id: '$studio', n: { $sum: 1 } } }, { $sort: { n: -1 } } ])`],
+[2,'mongo',`Players with more than 4 sessions.`,`db.sessions.aggregate([ { $group: { _id: '$username', n: { $sum: 1 } } }, { $match: { n: { $gt: 4 } } } ])`],
+[2,'mongo',`Average score per studio.`,`db.sessions.aggregate([ { $group: { _id: '$studio', avg: { $avg: '$score' } } } ])`],
+[2,'mongo',`Most expensive game per genre (sort then group $first).`,`db.games.aggregate([ { $sort: { price: -1 } }, { $group: { _id: '$genre', top: { $first: '$title' }, price: { $first: '$price' } } } ])`],
+[2,'mongo',`Per genre: session count and average score.`,`db.sessions.aggregate([ { $group: { _id: '$genre', n: { $sum: 1 }, avgScore: { $avg: '$score' } } } ])`],
+/* MONGO HARD (gamehub) */
+[3,'mongo',`For each player, session count and average duration; keep only players with at least 3 sessions; sort by average duration descending.`,`db.sessions.aggregate([ { $group: { _id: '$username', sessions: { $sum: 1 }, avgDuration: { $avg: '$durationMin' } } }, { $match: { sessions: { $gte: 3 } } }, { $sort: { avgDuration: -1 } } ])`],
+[3,'mongo',`Monthly active players: number of distinct players per calendar month, in chronological order (label YYYY-MM).`,`db.sessions.aggregate([ { $group: { _id: { $dateToString: { format: '%Y-%m', date: '$playedOn' } }, players: { $addToSet: '$username' } } }, { $project: { activePlayers: { $size: '$players' } } }, { $sort: { _id: 1 } } ])`],
+[3,'mongo',`Top 3 players by total score.`,`db.sessions.aggregate([ { $group: { _id: '$username', total: { $sum: '$score' } } }, { $sort: { total: -1 } }, { $limit: 3 } ])`],
+[3,'mongo',`For each genre: count, average score and average duration.`,`db.sessions.aggregate([ { $group: { _id: '$genre', n: { $sum: 1 }, avgScore: { $avg: '$score' }, avgDur: { $avg: '$durationMin' } } } ])`],
+[3,'mongo',`Join sessions to the games collection on gameTitle using $lookup.`,`db.sessions.aggregate([ { $lookup: { from: 'games', localField: 'gameTitle', foreignField: 'title', as: 'game' } } ])`],
+[3,'mongo',`Bucket sessions by score (0-1000, 1000-2000, 2000-5000).`,`db.sessions.aggregate([ { $bucket: { groupBy: '$score', boundaries: [0,1000,2000,5000], default: 'other', output: { count: { $sum: 1 } } } } ])`],
+[3,'mongo',`Use $facet for count per genre AND the top 3 sessions by score.`,`db.sessions.aggregate([ { $facet: { byGenre: [ { $group: { _id: '$genre', n: { $sum: 1 } } } ], topScores: [ { $sort: { score: -1 } }, { $limit: 3 } ] } } ])`],
+[3,'mongo',`For each tag, the number of distinct players.`,`db.sessions.aggregate([ { $unwind: '$tags' }, { $group: { _id: '$tags', players: { $addToSet: '$username' } } }, { $project: { n: { $size: '$players' } } } ])`],
+[3,'mongo',`Average score grouped by premium and genre.`,`db.sessions.aggregate([ { $group: { _id: { premium: '$premium', genre: '$genre' }, avg: { $avg: '$score' } } } ])`],
+[3,'mongo',`The game with the highest total play time.`,`db.sessions.aggregate([ { $group: { _id: '$gameTitle', playtime: { $sum: '$durationMin' } } }, { $sort: { playtime: -1 } }, { $limit: 1 } ])`],
+[3,'mongo',`Per studio: total score and number of sessions, only studios with more than 5 sessions.`,`db.sessions.aggregate([ { $group: { _id: '$studio', totalScore: { $sum: '$score' }, n: { $sum: 1 } } }, { $match: { n: { $gt: 5 } } } ])`],
+[3,'mongo',`Tag each session 'long' if duration > 90 else 'short', then count per flag.`,`db.sessions.aggregate([ { $project: { long: { $cond: [ { $gt: ['$durationMin', 90] }, 'long', 'short' ] } } }, { $group: { _id: '$long', n: { $sum: 1 } } } ])`],
+[3,'mongo',`Win rate: percentage of sessions tagged 'victory'.`,`db.sessions.aggregate([ { $group: { _id: null, total: { $sum: 1 }, wins: { $sum: { $cond: [ { $in: ['victory','$tags'] }, 1, 0 ] } } } }, { $project: { pct: { $multiply: [ { $divide: ['$wins','$total'] }, 100 ] } } } ])`],
+[3,'mongo',`Top game per genre by total score.`,`db.sessions.aggregate([ { $group: { _id: { genre: '$genre', game: '$gameTitle' }, total: { $sum: '$score' } } }, { $sort: { total: -1 } }, { $group: { _id: '$_id.genre', topGame: { $first: '$_id.game' }, score: { $first: '$total' } } } ])`],
+[3,'mongo',`For each player, the distinct games they played and the count.`,`db.sessions.aggregate([ { $group: { _id: '$username', games: { $addToSet: '$gameTitle' } } }, { $project: { n: { $size: '$games' } } } ])`],
+[3,'mongo',`The genre with the highest average score.`,`db.sessions.aggregate([ { $group: { _id: '$genre', avg: { $avg: '$score' } } }, { $sort: { avg: -1 } }, { $limit: 1 } ])`],
+[3,'mongo',`Top 5 tags by number of sessions.`,`db.sessions.aggregate([ { $unwind: '$tags' }, { $group: { _id: '$tags', n: { $sum: 1 } } }, { $sort: { n: -1 } }, { $limit: 5 } ])`],
+[3,'mongo',`Average session duration per calendar month.`,`db.sessions.aggregate([ { $group: { _id: { $dateToString: { format: '%Y-%m', date: '$playedOn' } }, avg: { $avg: '$durationMin' } } }, { $sort: { _id: 1 } } ])`],
+[3,'mongo',`For each player, the number of distinct studios they engaged with.`,`db.sessions.aggregate([ { $group: { _id: '$username', studios: { $addToSet: '$studio' } } }, { $project: { n: { $size: '$studios' } } } ])`],
+[3,'mongo',`Per premium group: session count and average score.`,`db.sessions.aggregate([ { $group: { _id: '$premium', n: { $sum: 1 }, avgScore: { $avg: '$score' } } } ])`],
+/* REDIS BEGINNER (university) */
+[1,'redis',`Read the current value of total_students.`,`GET total_students`],
+[1,'redis',`Read the current value of total_courses.`,`GET total_courses`],
+[1,'redis',`A new student registers — increase total_students by one.`,`INCR total_students`],
+[1,'redis',`A student withdraws — decrease total_students by one.`,`DECR total_students`],
+[1,'redis',`Get the complete record of student 1001.`,`HGETALL student:1001`],
+[1,'redis',`Get the name of student 1001.`,`HGET student:1001 name`],
+[1,'redis',`Get the gpa of student 1001.`,`HGET student:1001 gpa`],
+[1,'redis',`Get the name of the CS department.`,`HGET department:CS name`],
+[1,'redis',`Get the complete record of course CS101.`,`HGETALL course:CS101`],
+[1,'redis',`Get the number of credits for CS101.`,`HGET course:CS101 credits`],
+[1,'redis',`Get the name of instructor 5001.`,`HGET instructor:5001 name`],
+[1,'redis',`List all students enrolled in CS101.`,`SMEMBERS course:CS101:students`],
+[1,'redis',`List all courses student 1003 is enrolled in.`,`SMEMBERS student:1003:courses`],
+[1,'redis',`Check whether student 1002 is enrolled in CS101.`,`SISMEMBER course:CS101:students 1002`],
+[1,'redis',`List all university departments.`,`SMEMBERS university:departments`],
+[1,'redis',`List all students in the CS department.`,`SMEMBERS department:CS:students`],
+[1,'redis',`List all courses in the CS department.`,`SMEMBERS department:CS:courses`],
+[1,'redis',`How many students are enrolled in CS101?`,`SCARD course:CS101:students`],
+[1,'redis',`How many students are in the CS department?`,`SCARD department:CS:students`],
+[1,'redis',`Show the full activity log of student 1001 in order.`,`LRANGE student:1001:activity 0 -1`],
+[1,'redis',`How many activity entries does student 1001 have?`,`LLEN student:1001:activity`],
+[1,'redis',`Get the first (oldest) activity entry of student 1001.`,`LINDEX student:1001:activity 0`],
+[1,'redis',`List CS101 grades from lowest to highest, with scores.`,`ZRANGE course:CS101:grades 0 -1 WITHSCORES`],
+[1,'redis',`List CS101 grades from highest to lowest, with scores.`,`ZREVRANGE course:CS101:grades 0 -1 WITHSCORES`],
+[1,'redis',`Get the CS101 grade of student 1001.`,`ZSCORE course:CS101:grades 1001`],
+[1,'redis',`How many students have a CS101 grade?`,`ZCARD course:CS101:grades`],
+[1,'redis',`Who is the instructor of CS101?`,`GET course:CS101:instructor`],
+[1,'redis',`Check whether the key student:1001 exists.`,`EXISTS student:1001`],
+[1,'redis',`Report the data type of course:CS101:grades.`,`TYPE course:CS101:grades`],
+[1,'redis',`Report the data type of student:1001.`,`TYPE student:1001`],
+[1,'redis',`Get all field names of student 1001.`,`HKEYS student:1001`],
+[1,'redis',`Get all field values of student 1001.`,`HVALS student:1001`],
+[1,'redis',`How many fields does student 1001 have?`,`HLEN student:1001`],
+[1,'redis',`Get the building of the EE department.`,`HGET department:EE building`],
+[1,'redis',`List all students enrolled in CS103.`,`SMEMBERS course:CS103:students`],
+[1,'redis',`Get the name of student 1003.`,`HGET student:1003 name`],
+[1,'redis',`List CS102 grades with scores.`,`ZRANGE course:CS102:grades 0 -1 WITHSCORES`],
+[1,'redis',`Check whether CS102 is a course of the CS department.`,`SISMEMBER department:CS:courses CS102`],
+[1,'redis',`Show the top student in CS101 (highest grade) with score.`,`ZREVRANGE course:CS101:grades 0 0 WITHSCORES`],
+[1,'redis',`Get the name of course CS102.`,`HGET course:CS102 name`],
+/* REDIS INTERMEDIATE (university) */
+[2,'redis',`Get the complete record of student 1003.`,`HGETALL student:1003`],
+[2,'redis',`Get just the gpa of student 1003.`,`HGET student:1003 gpa`],
+[2,'redis',`Student 1003 has graduated — change their status field to graduated.`,`HSET student:1003 status graduated`],
+[2,'redis',`Student 1001 just logged out — append "Logged out" as the newest activity entry.`,`RPUSH student:1001:activity "Logged out"`],
+[2,'redis',`Show only the first two (oldest) entries of student 1001's activity log.`,`LRANGE student:1001:activity 0 1`],
+[2,'redis',`Enroll student 1002 into CS103 — update the student's course set.`,`SADD student:1002:courses CS103`],
+[2,'redis',`Enroll student 1002 into CS103 — update the course's student set.`,`SADD course:CS103:students 1002`],
+[2,'redis',`Check whether student 1004 is enrolled in CS101.`,`SISMEMBER course:CS101:students 1004`],
+[2,'redis',`List CS101 students who scored 90 or above, with scores.`,`ZRANGEBYSCORE course:CS101:grades 90 +inf WITHSCORES`],
+[2,'redis',`Record a grade of 79 for student 1004 in CS101.`,`ZADD course:CS101:grades 79 1004`],
+[2,'redis',`Give student 1001 a 5-point bonus in CS101.`,`ZINCRBY course:CS101:grades 5 1001`],
+[2,'redis',`Advance student 1001 by one academic year.`,`HINCRBY student:1001 year 1`],
+[2,'redis',`Register a new student 1006 with name "New Student".`,`HSET student:1006 name "New Student"`],
+[2,'redis',`Add a new department 'ME' to the university.`,`SADD university:departments ME`],
+[2,'redis',`How many students are enrolled in CS102?`,`SCARD course:CS102:students`],
+[2,'redis',`List students enrolled in BOTH CS101 and CS102.`,`SINTER course:CS101:students course:CS102:students`],
+[2,'redis',`List students enrolled in CS101 OR CS103.`,`SUNION course:CS101:students course:CS103:students`],
+[2,'redis',`List students in CS101 but NOT in CS102.`,`SDIFF course:CS101:students course:CS102:students`],
+[2,'redis',`How many CS101 students scored between 80 and 100?`,`ZCOUNT course:CS101:grades 80 100`],
+[2,'redis',`What is student 1002's rank in CS101 (lowest grade = 0)?`,`ZRANK course:CS101:grades 1002`],
+[2,'redis',`What is student 1003's rank in CS101 counting from the top?`,`ZREVRANK course:CS101:grades 1003`],
+[2,'redis',`Unenroll student 1002 from CS101 (course side).`,`SREM course:CS101:students 1002`],
+[2,'redis',`Move student 1004 from the CS department to the EE department.`,`SMOVE department:CS:students department:EE:students 1004`],
+[2,'redis',`Push "Session start" to the head of student 1001's activity log.`,`LPUSH student:1001:activity "Session start"`],
+[2,'redis',`Keep only the first 3 entries of student 1001's activity log.`,`LTRIM student:1001:activity 0 2`],
+[2,'redis',`Remove the newest entry from student 1001's activity log.`,`RPOP student:1001:activity`],
+[2,'redis',`Check whether student 1001 has a gpa field.`,`HEXISTS student:1001 gpa`],
+[2,'redis',`Get the name and gpa of student 1001 together.`,`HMGET student:1001 name gpa`],
+[2,'redis',`Set a 1800-second expiry on session:1001.`,`EXPIRE session:1001 1800`],
+[2,'redis',`Make session:1001 permanent (remove its expiry).`,`PERSIST session:1001`],
+[2,'redis',`Get student 1003's grade in CS102.`,`ZSCORE course:CS102:grades 1003`],
+[2,'redis',`How many departments does the university have?`,`SCARD university:departments`],
+[2,'redis',`Check whether CS102 is in student 1003's courses.`,`SISMEMBER student:1003:courses CS102`],
+[2,'redis',`Remove the status field of student 1004.`,`HDEL student:1004 status`],
+[2,'redis',`Who is the instructor of CS103?`,`GET course:CS103:instructor`],
+[2,'redis',`Record a grade of 88 for student 1005 in EE201.`,`ZADD course:EE201:grades 88 1005`],
+[2,'redis',`Set total_courses to 5 only if it does not already exist.`,`SETNX total_courses 5`],
+[2,'redis',`Get the title of instructor 5002.`,`HGET instructor:5002 title`],
+[2,'redis',`List the second-to-last activity entry of student 1001.`,`LINDEX student:1001:activity -2`],
+[2,'redis',`Add courses CS101 and CS102 to student 1006.`,`SADD student:1006:courses CS101 CS102`],
+/* REDIS HARD (university) */
+[3,'redis',`How many seconds remain on session:1001 before it expires?`,`TTL session:1001`],
+[3,'redis',`Confirm session:1001 still exists, and report the type of course:CS101:grades.`,`EXISTS session:1001\nTYPE course:CS101:grades`],
+[3,'redis',`Enroll student 1005 into CS102 as a single atomic transaction that updates both the student's course set and the course's student set.`,`MULTI\nSADD student:1005:courses CS102\nSADD course:CS102:students 1005\nEXEC`],
+[3,'redis',`Show the entire activity log of student 1001 in chronological order.`,`LRANGE student:1001:activity 0 -1`],
+[3,'redis',`Show the top student in CS101 by grade, with score.`,`ZREVRANGE course:CS101:grades 0 0 WITHSCORES`],
+[3,'redis',`Record a grade of 79 for student 1004 in CS101, then show the full ranking highest-to-lowest.`,`ZADD course:CS101:grades 79 1004\nZREVRANGE course:CS101:grades 0 -1 WITHSCORES`],
+[3,'redis',`Atomically increment total_students and register student 1007 with name "Zoe".`,`MULTI\nINCR total_students\nHSET student:1007 name "Zoe"\nEXEC`],
+[3,'redis',`List students enrolled in both CS101 and CS103.`,`SINTER course:CS101:students course:CS103:students`],
+[3,'redis',`Move the most recent activity entry of student 1001 into an archive list.`,`RPOPLPUSH student:1001:activity student:1001:archive`],
+[3,'redis',`Count CS101 students scoring 85 or above.`,`ZCOUNT course:CS101:grades 85 +inf`],
+[3,'redis',`Remove the lowest-graded student from CS101.`,`ZREMRANGEBYRANK course:CS101:grades 0 0`],
+[3,'redis',`Remove and return the highest grade in CS101.`,`ZPOPMAX course:CS101:grades`],
+[3,'redis',`List CS101 grades between 70 and 90, with scores.`,`ZRANGEBYSCORE course:CS101:grades 70 90 WITHSCORES`],
+[3,'redis',`Atomically enroll student 1002 into CS103 in both directions.`,`MULTI\nSADD student:1002:courses CS103\nSADD course:CS103:students 1002\nEXEC`],
+[3,'redis',`Scan for keys matching student:*.`,`SCAN 0 MATCH student:*`],
+[3,'redis',`How many courses does student 1003 take?`,`SCARD student:1003:courses`],
+[3,'redis',`List all courses in the CS department.`,`SMEMBERS department:CS:courses`],
+[3,'redis',`Set a 60-second expiry on session:1001, then read its TTL.`,`EXPIRE session:1001 60\nTTL session:1001`],
+[3,'redis',`List students in CS101 but not CS102.`,`SDIFF course:CS101:students course:CS102:students`],
+[3,'redis',`Watch total_students, then run a transaction that increments it.`,`WATCH total_students\nMULTI\nINCR total_students\nEXEC`],
+];
+const _IGNORED_OLD = [
 /* PG BEGINNER */
 [1,'pg',`Join employees with departments and show each employee first_name and their dept_name.`,`SELECT e.first_name, d.dept_name FROM employees e JOIN departments d ON e.dept_id = d.dept_id;`],
 [1,'pg',`List every employee with their department name, INCLUDING employees with no department (LEFT JOIN).`,`SELECT e.first_name, d.dept_name FROM employees e LEFT JOIN departments d ON e.dept_id = d.dept_id;`],
@@ -720,7 +1091,7 @@ async function grade(task, input){
       if(stu.error) return {ok:false, error:stu.error};
       let ok, render;
       if(isRead){ ok = eqArr(bagPG(stu.rows), bagPG(model.rows)); render={kind:'rows', rows:stu.rows, cols:stu.fields, exp:model.rows, expcols:model.fields}; }
-      else { ok = (stu.state===model.state); const after=await pgAfter(input); render={kind:'state', tables:after}; }
+      else { ok = (stu.state===model.state); const after=await pgAfter(input); render={kind:'state', rows:after.rows}; }
       return {ok, render};
     }
     if(db==='mongo'){
@@ -742,9 +1113,8 @@ async function grade(task, input){
   }catch(e){ return {ok:false, error:String(e.message||e)}; }
 }
 async function pgAfter(sql){ await pgReseed(); try{ await pg.exec(sql); }catch(e){}
-  const e=await pg.query('SELECT * FROM employees ORDER BY emp_id');
-  const d=await pg.query('SELECT * FROM departments ORDER BY dept_id');
-  return {employees:e.rows, departments:d.rows};
+  const m=sql.match(/\b(?:into|update|from)\s+"?([a-z_]+)"?/i); const tbl=m?m[1]:'games';
+  try{ const r=await pg.query('SELECT * FROM '+tbl+' LIMIT 100'); return {rows:r.rows}; }catch(e){ return {rows:[]}; }
 }
 async function runOnly(task, input){
   const db=task.db;
@@ -768,78 +1138,80 @@ function esc(s){ return String(s).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','
 /* ================= UI ================= */
 let phase=1, db='pg', page=0, idx=0;
 const status={};
-try{ const s=localStorage.getItem('qp_live'); if(s)Object.assign(status,JSON.parse(s)); }catch(e){}
+try{ const s=localStorage.getItem('qp_live_gamehub'); if(s)Object.assign(status,JSON.parse(s)); }catch(e){}
 const SESS={}; let QTEXT={};
-try{ QTEXT=JSON.parse(localStorage.getItem('qp_text')||'{}'); }catch(e){}
-function save(){ try{ localStorage.setItem('qp_live',JSON.stringify(status)); }catch(e){} }
+try{ QTEXT=JSON.parse(localStorage.getItem('qp_text_gamehub')||'{}'); }catch(e){}
+function save(){ try{ localStorage.setItem('qp_live_gamehub',JSON.stringify(status)); }catch(e){} }
 const SCHEMAS={
- pg:`<div class="schema"><b>PostgreSQL — live (PGlite)</b>
-employees(emp_id, first_name, last_name, email,
-  salary, dept_id, hire_date, manager_id)
-departments(dept_id, dept_name, location)
-projects(proj_id, proj_name, dept_id, budget)
-products(product_id, product_name, category,
-  price, stock)
-customers(customer_id, name, country, city,
-  signup_date)
-orders(order_id, customer_id, order_date,
-  status, total)
-order_items(item_id, order_id, product_id,
-  quantity, unit_price)</div>`,
- mongo:`<div class="schema"><b>MongoDB — live (mingo)</b>
-books { title, author, year, price, pages,
-  rating, publisher, inStock, genres[] }
-authors { name, country }
-reviews { book, user, rating, helpful }</div>`,
- redis:`<div class="schema"><b>Redis — live (emulator)</b>
-str  pageviews=100 · config:title=Welcome
-hash user:100 {name,email,age,city}
-list queue:emails [job1,job2,job3]
-set  online:users{u1,u2,u3} premium:users{u2,u4}
-zset scores{player1:100,player2:250,player3:175}
-zset bonus{player1:50,player2:20}
-ttl  session:abc(300) · bitmap · hll:visitors</div>`
+ pg:`<div class="schema"><b>PostgreSQL — gamehub (PGlite)</b>
+studios(studio_id, name, country, founded)
+games(game_id, title, genre, studio_id,
+  price, release_year, multiplayer)
+players(player_id, username, country,
+  joined, premium)
+purchases(purchase_id, player_id, game_id,
+  purchased_on, amount_paid)
+reviews(review_id, game_id, player_id,
+  rating, body, posted_on)
+sessions(session_id, player_id, game_id,
+  played_on, duration_min, score)
+VIEW game_sales_report</div>`,
+ mongo:`<div class="schema"><b>MongoDB — gamehub (mingo)</b>
+games { title, genre, studio, price,
+  releaseYear, multiplayer }
+players { username, country, joined, premium }
+sessions { username, gameTitle, genre, studio,
+  premium, playedOn, durationMin, score,
+  tags[] }</div>`,
+ redis:`<div class="schema"><b>Redis — university (emulator)</b>
+str  total_students=5 · total_courses=4
+hash student:1001..1005 {name,year,gpa,status}
+hash course:CS101.. {name,credits} · department:* · instructor:*
+set  university:departments · course:CS101:students
+     student:1001:courses · department:CS:students
+list student:1001:activity
+zset course:CS101:grades {1001:88,1002:75,1003:91}
+str  course:CS101:instructor · session:1001(ttl)</div>`
 };
 const DIAGRAMS={
- pg:`<svg viewBox="0 0 260 430" class="er" xmlns="http://www.w3.org/2000/svg">
+ pg:`<svg viewBox="0 0 260 350" class="er" xmlns="http://www.w3.org/2000/svg">
 <defs><marker id="arr" markerWidth="9" markerHeight="9" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#54a8ff"/></marker></defs>
-<path class="er-line" d="M58,72 C24,66 24,42 58,36" marker-end="url(#arr)"/>
-<path class="er-line" d="M58,128 C8,112 8,42 58,32" marker-end="url(#arr)"/>
-<path class="er-line" d="M58,262 C24,256 24,232 58,226" marker-end="url(#arr)"/>
-<path class="er-line" d="M58,372 C8,356 8,284 58,266" marker-end="url(#arr)"/>
-<path class="er-line" d="M208,372 C240,360 240,330 208,326" marker-end="url(#arr)"/>
-<g class="er-b"><rect class="er-box" x="58" y="8" width="150" height="40" rx="8"/><text class="er-t" x="68" y="26">departments</text><text class="er-k" x="68" y="40">dept_id (PK)</text></g>
-<g class="er-b"><rect class="er-box" x="58" y="64" width="150" height="44" rx="8"/><text class="er-t" x="68" y="82">employees</text><text class="er-k" x="68" y="99">dept_id · manager_id</text></g>
-<g class="er-b"><rect class="er-box" x="58" y="118" width="150" height="40" rx="8"/><text class="er-t" x="68" y="136">projects</text><text class="er-k" x="68" y="150">dept_id (FK)</text></g>
-<g class="er-b"><rect class="er-box" x="58" y="196" width="150" height="40" rx="8"/><text class="er-t" x="68" y="214">customers</text><text class="er-k" x="68" y="228">customer_id (PK)</text></g>
-<g class="er-b"><rect class="er-box" x="58" y="252" width="150" height="40" rx="8"/><text class="er-t" x="68" y="270">orders</text><text class="er-k" x="68" y="284">customer_id (FK)</text></g>
-<g class="er-b"><rect class="er-box" x="58" y="308" width="150" height="40" rx="8"/><text class="er-t" x="68" y="326">products</text><text class="er-k" x="68" y="340">product_id (PK)</text></g>
-<g class="er-b"><rect class="er-box" x="58" y="364" width="150" height="44" rx="8"/><text class="er-t" x="68" y="382">order_items</text><text class="er-k" x="68" y="399">order_id · product_id</text></g>
+<path class="er-line" d="M58,72 C24,66 24,42 58,40" marker-end="url(#arr)"/>
+<path class="er-line" d="M58,182 C26,176 26,150 58,148" marker-end="url(#arr)"/>
+<path class="er-line" d="M208,182 C240,160 240,92 208,84" marker-end="url(#arr)"/>
+<path class="er-line" d="M58,236 C8,200 8,98 58,96" marker-end="url(#arr)"/>
+<path class="er-line" d="M58,290 C16,260 16,150 58,150" marker-end="url(#arr)"/>
+<g class="er-b"><rect class="er-box" x="58" y="8" width="150" height="40" rx="8"/><text class="er-t" x="68" y="26">studios</text><text class="er-k" x="68" y="40">studio_id (PK)</text></g>
+<g class="er-b"><rect class="er-box" x="58" y="64" width="150" height="44" rx="8"/><text class="er-t" x="68" y="82">games</text><text class="er-k" x="68" y="99">studio_id (FK)</text></g>
+<g class="er-b"><rect class="er-box" x="58" y="118" width="150" height="40" rx="8"/><text class="er-t" x="68" y="136">players</text><text class="er-k" x="68" y="150">player_id (PK)</text></g>
+<g class="er-b"><rect class="er-box" x="58" y="170" width="150" height="44" rx="8"/><text class="er-t" x="68" y="188">purchases</text><text class="er-k" x="68" y="205">player_id · game_id</text></g>
+<g class="er-b"><rect class="er-box" x="58" y="224" width="150" height="44" rx="8"/><text class="er-t" x="68" y="242">reviews</text><text class="er-k" x="68" y="259">game_id · player_id</text></g>
+<g class="er-b"><rect class="er-box" x="58" y="278" width="150" height="44" rx="8"/><text class="er-t" x="68" y="296">sessions</text><text class="er-k" x="68" y="313">player_id · game_id</text></g>
 </svg>
-<div class="er-cap"><b>HR</b>: emp/proj → departments &nbsp;·&nbsp; <b>Sales</b>: orders → customers · order_items → orders/products</div>`,
- mongo:`<svg viewBox="0 0 260 250" class="er" xmlns="http://www.w3.org/2000/svg">
+<div class="er-cap">games → studios &nbsp;·&nbsp; purchases / reviews / sessions → players &amp; games</div>`,
+ mongo:`<svg viewBox="0 0 260 230" class="er" xmlns="http://www.w3.org/2000/svg">
 <defs>
 <marker id="arr2" markerWidth="9" markerHeight="9" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#7cc4ff"/></marker>
 <linearGradient id="lg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#54a8ff"/><stop offset="1" stop-color="#9b6bff"/></linearGradient>
 </defs>
-<path id="mp1" class="er-line2" d="M170,102 C214,116 208,150 182,158" marker-end="url(#arr2)"/>
-<path id="mp2" class="er-line2" d="M74,158 C50,138 56,118 84,102" marker-end="url(#arr2)"/>
+<path id="mp1" class="er-line2" d="M78,150 C58,120 64,96 70,86" marker-end="url(#arr2)"/>
+<path id="mp2" class="er-line2" d="M182,150 C204,120 198,96 190,86" marker-end="url(#arr2)"/>
 <circle r="3.2" fill="#bfe0ff" class="flow-dot"><animateMotion dur="2.4s" repeatCount="indefinite"><mpath href="#mp1"/></animateMotion></circle>
 <circle r="3.2" fill="#d3c0ff" class="flow-dot"><animateMotion dur="2.4s" begin="0.7s" repeatCount="indefinite"><mpath href="#mp2"/></animateMotion></circle>
-<g class="er-b float"><rect class="er-box glowbox" x="55" y="12" width="150" height="84" rx="11"/><text class="er-t" x="66" y="31">books</text><text class="er-k" x="66" y="48">title · author · price</text><text class="er-k" x="66" y="63">rating · inStock</text><text class="er-k" x="66" y="78">year · genres[ ]</text></g>
-<g class="er-b float2"><rect class="er-box glowbox" x="142" y="156" width="108" height="48" rx="11"/><text class="er-t" x="153" y="175">authors</text><text class="er-k" x="153" y="191">name · country</text></g>
-<g class="er-b float3"><rect class="er-box glowbox" x="6" y="156" width="116" height="58" rx="11"/><text class="er-t" x="17" y="175">reviews</text><text class="er-k" x="17" y="191">book · user</text><text class="er-k" x="17" y="206">rating · helpful</text></g>
+<g class="er-b float"><rect class="er-box glowbox" x="6" y="12" width="118" height="72" rx="11"/><text class="er-t" x="16" y="31">games</text><text class="er-k" x="16" y="48">title · genre</text><text class="er-k" x="16" y="63">studio · price</text><text class="er-k" x="16" y="78">multiplayer</text></g>
+<g class="er-b float2"><rect class="er-box glowbox" x="136" y="12" width="118" height="72" rx="11"/><text class="er-t" x="146" y="31">players</text><text class="er-k" x="146" y="48">username</text><text class="er-k" x="146" y="63">country · premium</text><text class="er-k" x="146" y="78">joined</text></g>
+<g class="er-b float3"><rect class="er-box glowbox" x="40" y="150" width="180" height="66" rx="11"/><text class="er-t" x="50" y="169">sessions</text><text class="er-k" x="50" y="186">username · gameTitle · genre</text><text class="er-k" x="50" y="202">score · durationMin · tags[ ]</text></g>
 </svg>
-<div class="er-cap"><b>reviews.book</b> → books.title &nbsp;·&nbsp; <b>books.author</b> → authors.name</div>`,
+<div class="er-cap">sessions <b>embed</b> game + player details (gameTitle, username, genre…)</div>`,
  redis:`<div class="rchips">
-<span class="rchip c1">string<small>pageviews · config:title</small></span>
-<span class="rchip c2">hash<small>user:100</small></span>
-<span class="rchip c3">list<small>queue:emails</small></span>
-<span class="rchip c4">set<small>online · premium</small></span>
-<span class="rchip c5">zset<small>scores · bonus</small></span>
-<span class="rchip c6">ttl · bitmap · hll</span>
+<span class="rchip c1">string<small>total_students · :instructor</small></span>
+<span class="rchip c2">hash<small>student:* · course:* · department:*</small></span>
+<span class="rchip c3">list<small>student:1001:activity</small></span>
+<span class="rchip c4">set<small>course:CS101:students · :courses</small></span>
+<span class="rchip c5">zset<small>course:CS101:grades</small></span>
+<span class="rchip c6">ttl<small>session:1001</small></span>
 </div>
-<div class="er-cap">every key has a <b>type</b> — match it to the command family (H*, L*, S*, Z*)</div>`
+<div class="er-cap">university DB — match each key's <b>type</b> to its command family</div>`
 };
 const $=id=>document.getElementById(id);
 function pageSize(){ return phase===3?10:20; }
@@ -872,7 +1244,7 @@ function restoreState(t){
   if(s){ $('editor').value=s.text||''; $('verdict').className=s.vcls||'verdict'; $('verdict').innerHTML=s.vhtml||''; $('resultwrap').className=s.rw||'resultwrap'; $('resTitle').textContent=s.rt||'Your result'; $('resultArea').innerHTML=s.ra||''; $('expectedArea').innerHTML=s.ea||''; }
   else { $('editor').value=QTEXT[t._i]||''; clearOutputs(); }
 }
-function saveState(t){ if(!t)return; SESS[t._i]={ text:$('editor').value, vcls:$('verdict').className, vhtml:$('verdict').innerHTML, rw:$('resultwrap').className, rt:$('resTitle').textContent, ra:$('resultArea').innerHTML, ea:$('expectedArea').innerHTML }; QTEXT[t._i]=$('editor').value; try{ localStorage.setItem('qp_text',JSON.stringify(QTEXT)); }catch(e){} }
+function saveState(t){ if(!t)return; SESS[t._i]={ text:$('editor').value, vcls:$('verdict').className, vhtml:$('verdict').innerHTML, rw:$('resultwrap').className, rt:$('resTitle').textContent, ra:$('resultArea').innerHTML, ea:$('expectedArea').innerHTML }; QTEXT[t._i]=$('editor').value; try{ localStorage.setItem('qp_text_gamehub',JSON.stringify(QTEXT)); }catch(e){} }
 function renderTask(){
   const list=current(); if(idx>=list.length)idx=0; const t=list[idx];
   $('qmeta').textContent=labelDb()+' · '+labelPhase()+' · Task '+(page*pageSize()+idx+1);
@@ -891,7 +1263,7 @@ function showResult(render, ok){
     $('expectedArea').innerHTML=(!ok&&render.exp!=null)?'<details open><summary>Expected</summary><div class="reply ok" style="margin-top:6px">'+esc(render.exp)+'</div></details>':''; }
   else if(render.kind==='reply'){ $('resultArea').innerHTML='<div class="reply '+cls+'">'+esc(render.reply.map(fmtReply).join('\n'))+'</div>';
     $('expectedArea').innerHTML=(!ok&&render.exp)?'<details open><summary>Expected replies</summary><div class="reply ok" style="margin-top:6px">'+esc(render.exp.map(fmtReply).join('\n'))+'</div></details>':''; }
-  else if(render.kind==='state'){ $('resultArea').innerHTML='<div class="tablebox '+cls+'"><div style="padding:6px 10px;color:#90a6bd">employees after your command:</div>'+rowsToTable(render.tables.employees)+'</div>'; $('expectedArea').innerHTML=''; }
+  else if(render.kind==='state'){ $('resultArea').innerHTML='<div class="tablebox '+cls+'"><div style="padding:6px 10px;color:#90a6bd">table after your command:</div>'+rowsToTable(render.rows)+'</div>'; $('expectedArea').innerHTML=''; }
 }
 function fmtReply(r){ if(r===null)return '(nil)'; if(Array.isArray(r))return '['+r.join(', ')+']'; return String(r); }
 async function doCheck(){
@@ -928,7 +1300,7 @@ $('clearBtn').onclick=()=>{ $('editor').value=''; $('editor').focus(); };
 $('prevBtn').onclick=()=>{ if(idx>0){idx--;renderTask();} };
 $('nextBtn').onclick=()=>{ if(idx<current().length-1){idx++;renderTask();} };
 $('editor').addEventListener('keydown',e=>{ if((e.ctrlKey||e.metaKey)&&e.key==='Enter'){ e.preventDefault(); doCheck(); } });
-$('editor').addEventListener('input',()=>{ const t=current()[idx]; if(t){ QTEXT[t._i]=$('editor').value; if(SESS[t._i])SESS[t._i].text=$('editor').value; try{ localStorage.setItem('qp_text',JSON.stringify(QTEXT)); }catch(e){} } });
+$('editor').addEventListener('input',()=>{ const t=current()[idx]; if(t){ QTEXT[t._i]=$('editor').value; if(SESS[t._i])SESS[t._i].text=$('editor').value; try{ localStorage.setItem('qp_text_gamehub',JSON.stringify(QTEXT)); }catch(e){} } });
 [...document.querySelectorAll('#phaseTabs .tab')].forEach(tab=>tab.onclick=()=>{ document.querySelectorAll('#phaseTabs .tab').forEach(x=>x.classList.remove('active')); tab.classList.add('active'); phase=+tab.dataset.p; page=0; idx=0; renderTask(); });
 [...document.querySelectorAll('#dbTabs .dbtab')].forEach(tab=>tab.onclick=()=>{ document.querySelectorAll('#dbTabs .dbtab').forEach(x=>x.classList.remove('active')); tab.classList.add('active'); db=tab.dataset.db; page=0; idx=0; renderSchema(); renderTask(); });
 
