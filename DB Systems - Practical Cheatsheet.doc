@@ -1,0 +1,253 @@
+<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40">
+<head>
+<meta charset="utf-8">
+<title>DB Systems - Practical Cheatsheet</title>
+<!--[if gte mso 9]><xml><w:WordDocument><w:View>Print</w:View><w:Zoom>100</w:Zoom></w:WordDocument></xml><![endif]-->
+<style>
+ body{font-family:Calibri,Arial,sans-serif;font-size:10.5pt;color:#1a1a1a;line-height:1.35;}
+ h1{font-size:19pt;color:#0b3d66;border-bottom:2px solid #0b3d66;padding-bottom:4px;}
+ h2{font-size:15pt;color:#0b3d66;margin-top:20px;border-bottom:1.5px solid #0b3d66;}
+ h3{font-size:12pt;color:#14537a;margin-top:12px;}
+ p{margin:4px 0;}
+ code{font-family:Consolas,monospace;background:#eef2f5;padding:0 3px;font-size:9.5pt;}
+ pre{font-family:Consolas,"Courier New",monospace;background:#f4f6f8;border:1px solid #d4dde3;padding:7px 9px;font-size:9pt;white-space:pre-wrap;margin:6px 0;}
+ hr{border:none;border-top:1px solid #c2c2c2;margin:16px 0;}
+ .t{color:#7a4d00;font-weight:600;}
+</style>
+</head>
+<body>
+
+<h1>IT 2008 Database Systems — Practical Cheatsheet</h1>
+<p>Quick reference of commands and queries for the practical exam: <strong>PostgreSQL · MongoDB · Redis</strong>. Examples use the <em>gamehub</em> / university sample data.</p>
+
+<hr>
+<h2>1 · PostgreSQL (SQL)</h2>
+
+<h3>Basic SELECT / filter / sort</h3>
+<pre>SELECT * FROM games;
+SELECT title, price FROM games;                 -- pick columns
+SELECT DISTINCT genre FROM games;               -- unique values
+SELECT * FROM games WHERE price &gt; 20;            -- &lt; &gt; &gt;= &lt;= = &lt;&gt;
+SELECT * FROM games WHERE genre = 'Shooter' AND multiplayer = TRUE;
+SELECT * FROM games WHERE genre IN ('Shooter','Racing');
+SELECT * FROM games WHERE price BETWEEN 10 AND 30;
+SELECT * FROM players WHERE country IS NOT NULL;
+SELECT * FROM games ORDER BY price DESC;         -- ASC default
+SELECT * FROM games ORDER BY price DESC LIMIT 5; -- top 5</pre>
+
+<h3>LIKE / pattern / CASE / COALESCE</h3>
+<pre>WHERE username LIKE 'a%'    -- starts with a   (% = many chars, _ = one char)
+WHERE email LIKE '%gmail%'  -- contains
+ILIKE                        -- case-insensitive
+COALESCE(manager_id, 0)      -- first non-NULL
+CASE WHEN price = 0 THEN 'Free' WHEN price &lt; 20 THEN 'Cheap' ELSE 'Premium' END</pre>
+
+<h3>Aggregates + GROUP BY / HAVING</h3>
+<pre>SELECT COUNT(*), AVG(price), SUM(price), MIN(price), MAX(price) FROM games;
+SELECT genre, COUNT(*) FROM games GROUP BY genre;
+SELECT genre, AVG(price) FROM games GROUP BY genre HAVING AVG(price) &gt; 20;
+SELECT COUNT(DISTINCT genre) FROM games;</pre>
+
+<h3>Joins</h3>
+<pre>-- INNER: only matches
+SELECT g.title, s.name FROM games g JOIN studios s ON g.studio_id = s.studio_id;
+-- LEFT: keep all left rows (NULL where no match)  + COALESCE for 0
+SELECT g.title, COALESCE(SUM(p.amount_paid),0) AS revenue
+FROM games g LEFT JOIN purchases p ON p.game_id = g.game_id
+GROUP BY g.title;
+-- RIGHT JOIN, FULL OUTER JOIN, CROSS JOIN (cartesian) also exist
+-- self join
+SELECT a.title, b.title FROM games a JOIN games b ON a.price = b.price AND a.game_id &lt; b.game_id;</pre>
+
+<h3>Subqueries / set operations</h3>
+<pre>SELECT * FROM games WHERE price &gt; (SELECT AVG(price) FROM games);
+SELECT * FROM players WHERE player_id IN (SELECT player_id FROM purchases);
+-- set ops (same columns/types):
+SELECT col FROM a UNION SELECT col FROM b;       -- distinct
+SELECT col FROM a UNION ALL SELECT col FROM b;   -- keep dups
+... INTERSECT ...   ... EXCEPT ...</pre>
+
+<h3>Window functions</h3>
+<pre>RANK()       OVER (ORDER BY score DESC)
+ROW_NUMBER() OVER (PARTITION BY genre ORDER BY price DESC)
+DENSE_RANK() OVER (ORDER BY salary DESC)
+SUM(amount) OVER (ORDER BY day)                       -- running total
+AVG(score)  OVER (ORDER BY day ROWS BETWEEN 2 PRECEDING AND CURRENT ROW)
+NTILE(4)    OVER (ORDER BY price)                      -- quartiles
+LAG(price)  OVER (ORDER BY price)
+-- % of partition total:
+price * 100.0 / SUM(price) OVER (PARTITION BY genre)</pre>
+
+<h3>CTE (WITH) / recursion</h3>
+<pre>WITH top AS (SELECT player_id, SUM(amount_paid) tot FROM purchases GROUP BY player_id)
+SELECT * FROM top WHERE tot &gt; (SELECT AVG(tot) FROM top);
+
+WITH RECURSIVE chain AS (
+  SELECT id, manager_id, 1 AS lvl FROM emp WHERE manager_id IS NULL
+  UNION ALL
+  SELECT e.id, e.manager_id, c.lvl+1 FROM emp e JOIN chain c ON e.manager_id = c.id)
+SELECT * FROM chain;</pre>
+
+<h3>ROLLUP / CUBE (subtotals &amp; cross-tabs)</h3>
+<pre>SELECT genre, player_country, SUM(amount_paid)
+FROM game_sales_report
+GROUP BY ROLLUP (genre, player_country);          -- subtotal per genre + grand total
+
+SELECT studio_country, premium, SUM(amount_paid)
+FROM game_sales_report
+GROUP BY CUBE (studio_country, premium);           -- every combination + all subtotals</pre>
+
+<h3>Full-text search</h3>
+<pre>-- match both words:
+WHERE to_tsvector('english', body) @@ to_tsquery('english','space &amp; shooter')
+-- OR:  'space | shooter'    NOT: '!space'
+ts_rank(to_tsvector('english', body), to_tsquery('english','space &amp; shooter'))  -- relevance
+plainto_tsquery('english','space shooter')     -- plain words (AND)
+phraseto_tsquery('english','space shooter')    -- exact adjacent phrase
+websearch_to_tsquery('english','survival crafting')  -- web-style query
+ts_headline('english', body, to_tsquery('english','space &amp; shooter'))  -- highlighted snippet
+-- index it:  CREATE INDEX idx ON reviews USING gin(to_tsvector('english', body));</pre>
+
+<h3>Fuzzy matching / INSERT / UPDATE / DELETE / DDL</h3>
+<pre>levenshtein('bat','fads')          -- edit distance
+title % 'Avatre'                    -- trigram similarity (pg_trgm)
+metaphone('Broos',6)               -- phonetic
+
+INSERT INTO studios (name, country) VALUES ('New','UK');
+UPDATE games SET price = price * 0.9 WHERE genre = 'RPG';
+DELETE FROM games WHERE price = 0;
+
+CREATE VIEW v AS SELECT ...;                 -- stored query
+CREATE INDEX i ON games USING btree (price); -- hash for equality, gin/gist for FTS
+BEGIN; ... COMMIT;   |   ROLLBACK;           -- transaction</pre>
+
+<hr>
+<h2>2 · MongoDB</h2>
+
+<h3>find / projection / sort</h3>
+<pre>db.games.find()                                  // all
+db.games.find({ genre: 'Shooter' })
+db.games.find({ price: { $gt: 20 } })            // $lt $lte $gt $gte $ne
+db.games.find({ genre: { $in: ['Shooter','Racing'] } })   // $nin
+db.games.find({ price: { $gte: 10, $lte: 30 } })
+db.games.find({ multiplayer: true })
+db.games.find({}, { title: 1, _id: 0 })          // projection: 1 include, 0 exclude
+db.games.find().sort({ price: -1 }).limit(5)      // -1 desc, 1 asc
+db.games.find().sort({ price: -1 }).skip(5).limit(5)   // paging
+db.games.findOne({ title: 'Dune' })
+db.games.countDocuments({ genre: 'RPG' })
+db.games.distinct('genre')</pre>
+
+<h3>Operators (criteria)</h3>
+<pre>{ tags: 'victory' }                     // array contains value
+{ tags: { $all: ['solo','ranked'] } }   // contains all
+{ tags: { $size: 3 } }                  // array length
+{ field: { $exists: true } }
+{ 'mayor.party': 'D' }                  // dot notation (nested)
+{ $or: [ {a:1}, {b:2} ] }               // $and $nor
+{ title: /^The/ }                       // regex   (or { $regex:'war', $options:'i' })
+{ arr: { $elemMatch: { x:1, y:true } } }// conditions within ONE element</pre>
+
+<h3>insert / update / delete</h3>
+<pre>db.games.insertOne({ title:'X', price:9 })
+db.games.updateOne({ title:'Dune' }, { $set: { inStock: true } })   // WITHOUT $ = replaces doc!
+db.games.updateMany({ price:{$lt:15} }, { $set:{ onSale:true } })
+// update operators: $set $unset $inc $mul $push $addToSet $pull $pop $rename
+db.games.deleteMany({ rating: { $lt: 2 } })</pre>
+
+<h3>Aggregation pipeline (stages run in order)</h3>
+<pre>db.sessions.aggregate([
+  { $match:  { premium: true } },                         // filter (like WHERE)
+  { $unwind: '$tags' },                                   // array -> one row per element
+  { $group:  { _id: '$gameTitle', total: { $sum: '$score' },
+               avg: { $avg:'$durationMin' }, players: { $addToSet:'$username' } } },
+  { $match:  { total: { $gte: 1000 } } },                 // HAVING
+  { $sort:   { total: -1 } },                             // -1 desc
+  { $limit:  3 },
+  { $project:{ _id:0, gameTitle:'$_id', total:1,
+               distinctPlayers: { $size: '$players' } } } // reshape output
+])
+// accumulators: $sum $avg $min $max $push $addToSet $first $last
+// other stages: $skip $count $addFields $bucket $bucketAuto $facet $lookup</pre>
+
+<h3>Common patterns</h3>
+<pre>// count per group, reshaped
+db.sessions.aggregate([{ $group:{ _id:'$genre', n:{$sum:1} } },
+  { $sort:{ n:-1 } }, { $project:{ _id:0, genre:'$_id', n:1 } }])
+
+// distinct count via $addToSet + $size
+{ $group:{ _id:'$gameTitle', u:{ $addToSet:'$username' } } },
+{ $project:{ _id:0, gameTitle:'$_id', players:{ $size:'$u' } } }
+
+// month from a date
+{ $group:{ _id:{ $dateToString:{ format:'%Y-%m', date:'$playedOn' } }, n:{$sum:1} } }
+
+// join two collections
+{ $lookup:{ from:'games', localField:'gameTitle', foreignField:'title', as:'g' } },
+{ $unwind:'$g' }, { $project:{ username:1, price:'$g.price' } }
+
+// conditional value
+{ $project:{ cat:{ $cond:[ { $gt:['$durationMin',90] }, 'long', 'short' ] } } }</pre>
+
+<hr>
+<h2>3 · Redis</h2>
+
+<h3>Strings / counters</h3>
+<pre>SET total_students 5            GET total_students
+SETNX key val                  // set only if not exists
+SETEX key 30 val               // set + 30s expiry
+INCR total_students   DECR ...  INCRBY key 10   DECRBY key 5
+APPEND key " more"   STRLEN key   GETRANGE key 0 3   GETSET key new
+MSET a 1 b 2          MGET a b</pre>
+
+<h3>Hashes (objects)  — H*</h3>
+<pre>HSET student:1003 name "Maria" gpa 3.9
+HGET student:1003 gpa          HGETALL student:1003
+HMGET student:1003 name gpa    HKEYS k   HVALS k   HLEN k
+HEXISTS student:1003 gpa       HDEL student:1003 status
+HINCRBY student:1001 year 1</pre>
+
+<h3>Lists (queue/stack)  — L*/R*</h3>
+<pre>RPUSH q a b c                  // push right (tail)   LPUSH = push left (head)
+LRANGE q 0 -1                  // all (−1 = last)
+LLEN q   LINDEX q 0            LPOP q   RPOP q
+LSET q 0 first   LTRIM q 0 2   // keep first 3
+RPOPLPUSH src dst             // atomic move
+BLPOP q 5                      // blocking pop (wait 5s)</pre>
+
+<h3>Sets (unique, unordered)  — S*</h3>
+<pre>SADD course:CS101:students 1001 1002    SREM set m
+SMEMBERS set   SCARD set   SISMEMBER set 1004   // 1/0
+SINTER a b     SUNION a b   SDIFF a b
+SMOVE src dst member          SUNIONSTORE dest a b</pre>
+
+<h3>Sorted sets (score-ordered)  — Z*</h3>
+<pre>ZADD course:CS101:grades 88 1001 75 1002 91 1003
+ZSCORE z member        ZINCRBY z 5 member        ZCARD z
+ZRANGE z 0 -1 WITHSCORES        // low -&gt; high
+ZREVRANGE z 0 -1 WITHSCORES     // high -&gt; low   (top N: 0 N-1)
+ZRANGEBYSCORE z 90 +inf WITHSCORES     // by score  (( = exclusive)
+ZCOUNT z 80 100        ZRANK z m   ZREVRANK z m
+ZPOPMAX z   ZPOPMIN z   ZREMRANGEBYRANK z 0 0
+ZUNIONSTORE dest 2 z1 z2 WEIGHTS 1 2</pre>
+
+<h3>Expiry / keys / transactions / pub-sub</h3>
+<pre>EXPIRE key 60   PEXPIRE key 5000   TTL key   PERSIST key
+EXISTS key   DEL key   TYPE key   RENAME a b
+SCAN 0 MATCH student:*        KEYS pattern (avoid in prod)
+-- transaction (atomic block):
+MULTI
+  SADD student:1005:courses CS102
+  SADD course:CS102:students 1005
+EXEC                          // DISCARD cancels;  WATCH key = optimistic lock
+-- messaging:  SUBSCRIBE channel    PUBLISH channel "msg"
+-- persistence:  RDB snapshots (SAVE/BGSAVE) · AOF append-only log</pre>
+
+<hr>
+<p class="t">Remember:</p>
+<p>• <strong>WHERE</strong> filters rows, <strong>HAVING</strong> filters groups · <strong>%</strong>=many, <strong>_</strong>=one · window funcs keep rows (<code>OVER</code>), aggregates collapse them.<br>
+• Mongo: operators are <code>$op</code>; <code>$set</code> on updates or you replace the whole doc; aggregation ≈ WHERE+GROUP BY+ORDER BY; pick by stage order (<code>$match</code> early).<br>
+• Redis: the command letter tells the type — <code>H</code>=hash, <code>L/R</code>=list, <code>S</code>=set, <code>Z</code>=sorted set; <code>MULTI/EXEC</code> = transaction; <code>EXPIRE/TTL</code> = caching.</p>
+
+</body>
+</html>
